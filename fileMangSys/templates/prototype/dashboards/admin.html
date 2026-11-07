@@ -1,0 +1,129 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Administrator Dashboard - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Administrator Dashboard</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Assigned Departments: <strong>Finance, IT & Infrastructure</strong></p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'approvals_list' %}" class="btn btn-secondary">
+      Pending Approvals <span class="badge badge-pending" style="margin-left: 4px;">2</span>
+    </a>
+    <button class="btn btn-primary" data-modal-target="uploadModal">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload Document
+    </button>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Documents (Assigned Scope)</span>
+    <span class="stat-value">357</span>
+    <span class="stat-meta">Finance & IT folders</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Pending Submissions</span>
+    <span class="stat-value" style="color: var(--primary);">2</span>
+    <span class="stat-meta">Requires Admin sign-off</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Assigned Storage</span>
+    <span class="stat-value">80.7 GB</span>
+    <span class="stat-meta">Across 2 assigned departments</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Managed Users</span>
+    <span class="stat-value">11 Users</span>
+    <span class="stat-meta">Employees & Managers</span>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title">Pending Submissions for Review</h2>
+    <a href="{% url 'approvals_list' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Review Center</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Submitted Document</th>
+          <th>Department</th>
+          <th>Objective</th>
+          <th>Submitted By</th>
+          <th>Date</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in pending_documents %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary);">Size: {{ doc.file_size }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.department }}</td>
+          <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+            {{ doc.objective }}
+          </td>
+          <td style="font-weight: 500;">{{ doc.uploaded_by }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-sm btn-primary" data-action-approve>Approve</button>
+            <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent Uploads in Managed Scope</h2>
+    <a href="{% url 'file_manager' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Open File Manager</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Folder</th>
+          <th>Uploaded By</th>
+          <th>Version</th>
+          <th>Status</th>
+          <th style="text-align: right;">Options</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in recent_uploads %}
+        <tr data-searchable-row>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500;">{{ doc.title }}</a>
+            </div>
+          </td>
+          <td>{{ doc.folder }}</td>
+          <td>{{ doc.uploaded_by }}</td>
+          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+          <td><span class="badge badge-published">{{ doc.status }}</span></td>
+          <td style="text-align: right;">
+            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

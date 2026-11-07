@@ -1,0 +1,124 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Manager Dashboard - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Department Manager Dashboard</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Department: <strong>Finance</strong> (Managed by Hassan Al-Khatib)</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'file_manager' %}" class="btn btn-secondary">Browse Finance Folders</a>
+    <button class="btn btn-primary" data-modal-target="uploadModal">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Direct Upload
+    </button>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Department Documents</span>
+    <span class="stat-value">142</span>
+    <span class="stat-meta" style="color: var(--success);">Across 4 department folders</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Department Storage</span>
+    <span class="stat-value">6.14 GB</span>
+    <span class="stat-meta">60% of 10.0 GB quota</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Finance Team Members</span>
+    <span class="stat-value">5 Users</span>
+    <span class="stat-meta">1 Manager, 4 Employees</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Pending Approval</span>
+    <span class="stat-value" style="color: var(--primary);">1</span>
+    <span class="stat-meta"><a href="{% url 'approvals_list' %}" style="color: var(--primary);">Q4 Capital Expenditure</a></span>
+  </div>
+</div>
+
+<!-- Department Folders Bar -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title">Finance Department Folders</h2>
+    <a href="{% url 'file_manager' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Manage Folders</a>
+  </div>
+  <div class="folder-grid" style="margin-bottom: 0;">
+    <div class="folder-card active">
+      <span class="folder-icon">📂</span>
+      <div>
+        <div style="font-weight: 500;">Audit Reports</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">48 documents</div>
+      </div>
+    </div>
+    <div class="folder-card">
+      <span class="folder-icon">📂</span>
+      <div>
+        <div style="font-weight: 500;">Tax Filings</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">32 documents</div>
+      </div>
+    </div>
+    <div class="folder-card">
+      <span class="folder-icon">📂</span>
+      <div>
+        <div style="font-weight: 500;">Annual Budgets</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">29 documents</div>
+      </div>
+    </div>
+    <div class="folder-card">
+      <span class="folder-icon">📂</span>
+      <div>
+        <div style="font-weight: 500;">Invoices 2026</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">33 documents</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent Documents in Finance</h2>
+    <a href="{% url 'document_list' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">View all</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Folder</th>
+          <th>Objective</th>
+          <th>Version</th>
+          <th>Last Modified</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in department_docs %}
+        <tr data-searchable-row>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500;">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary);">{{ doc.file_size }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.folder }}</td>
+          <td style="max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+            {{ doc.objective }}
+          </td>
+          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
+          <td style="text-align: right;">
+            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Details</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

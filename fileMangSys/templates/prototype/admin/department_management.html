@@ -1,0 +1,66 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Department Management - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Department Administration</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Configure organizational departments, designated managers, storage quotas, and folder structures.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="alert('In Prototype: Add new department dialog.');">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Department
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Department Matrix ({{ departments|length }})</h2>
+    <span style="font-size: 12px; color: var(--text-secondary);">Deactivating a department never erases historical files</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Code / Name</th>
+          <th>Designated Manager</th>
+          <th>Staff Count</th>
+          <th>Files Count</th>
+          <th>Storage Used / Quota</th>
+          <th>Status</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dept in departments %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px;">{{ dept.code }}</span>
+              <strong style="font-size: 13px;">{{ dept.name }}</strong>
+            </div>
+          </td>
+          <td>{{ dept.manager }}</td>
+          <td>{{ dept.users_count }} users</td>
+          <td>{{ dept.files_count }} files</td>
+          <td>
+            <div style="font-size: 12px;">{{ dept.storage_used_mb }} MB / {{ dept.max_quota_mb }} MB</div>
+            <div class="progress-bar-bg" style="height: 5px; width: 120px; margin-top: 4px;">
+              <div class="progress-bar-fill" style="width: 60%;"></div>
+            </div>
+          </td>
+          <td><span class="badge badge-published">{{ dept.status }}</span></td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit quota & folders for {{ dept.name }}');">Configure</button>
+            <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Manage staff assignments for {{ dept.name }}');">Assign Staff</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

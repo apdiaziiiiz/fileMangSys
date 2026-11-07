@@ -1,0 +1,130 @@
+{% extends 'prototype/base.html' %}
+{% block title %}File Manager - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">File Manager & Folders</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Department: <strong>{{ active_dept }}</strong> &bull; Central Repository</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-secondary" onclick="alert('In Prototype: New Folder dialog.')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      New Folder
+    </button>
+    <button class="btn btn-primary" data-modal-target="uploadModal">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload File
+    </button>
+  </div>
+</div>
+
+<!-- Department Folders Selector -->
+<div class="folder-grid">
+  <div class="folder-card active" data-folder-name="all">
+    <span class="folder-icon">🗂️</span>
+    <div>
+      <div style="font-weight: 500;">All Folders</div>
+      <div style="font-size: 11px; color: var(--text-secondary);">Complete view</div>
+    </div>
+  </div>
+  <div class="folder-card" data-folder-name="Audit Reports">
+    <span class="folder-icon">📁</span>
+    <div>
+      <div style="font-weight: 500;">Audit Reports</div>
+      <div style="font-size: 11px; color: var(--text-secondary);">48 documents</div>
+    </div>
+  </div>
+  <div class="folder-card" data-folder-name="Annual Budgets">
+    <span class="folder-icon">📁</span>
+    <div>
+      <div style="font-weight: 500;">Annual Budgets</div>
+      <div style="font-size: 11px; color: var(--text-secondary);">29 documents</div>
+    </div>
+  </div>
+  <div class="folder-card" data-folder-name="Workplace Policies">
+    <span class="folder-icon">📁</span>
+    <div>
+      <div style="font-weight: 500;">Workplace Policies</div>
+      <div style="font-size: 11px; color: var(--text-secondary);">18 documents</div>
+    </div>
+  </div>
+  <div class="folder-card" data-folder-name="System Architecture">
+    <span class="folder-icon">📁</span>
+    <div>
+      <div style="font-weight: 500;">System Architecture</div>
+      <div style="font-size: 11px; color: var(--text-secondary);">24 documents</div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Explorer Table -->
+<div class="card">
+  <div class="card-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h2 class="card-title">Files</h2>
+      <span style="font-size: 12px; color: var(--text-secondary);">Click any file to inspect details, versions or share</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <select id="filterFileType" class="form-control" style="width: 140px; padding: 4px 8px; font-size: 12px;">
+        <option value="">All Formats</option>
+        <option value="pdf">PDF</option>
+        <option value="docx">Word (.docx)</option>
+        <option value="xlsx">Excel (.xlsx)</option>
+        <option value="png">Images</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th data-sort>Filename</th>
+          <th>Folder</th>
+          <th>Department</th>
+          <th data-sort>Size</th>
+          <th>Version</th>
+          <th data-sort>Upload Date</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr data-searchable-row data-folder="{{ doc.folder }}" data-department="{{ doc.department }}" data-type="{{ doc.file_type }}" data-status="{{ doc.status }}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary);">Doc ID: {{ doc.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.folder }}</td>
+          <td>{{ doc.department }}</td>
+          <td>{{ doc.file_size }}</td>
+          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
+          <td>
+            {% if doc.status == 'Published' %}
+              <span class="badge badge-published">Published</span>
+            {% elif doc.status == 'Pending' %}
+              <span class="badge badge-pending">Pending</span>
+            {% else %}
+              <span class="badge badge-rejected">Rejected</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm" title="View details">Inspect</a>
+            <a href="{% url 'version_history' doc.id %}" class="btn btn-secondary btn-sm" title="Version History">Versions</a>
+            <a href="{% url 'share_interface' doc.id %}" class="btn btn-secondary btn-sm" title="Internal Sharing">Share</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

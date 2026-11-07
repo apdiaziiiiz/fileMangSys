@@ -1,0 +1,100 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Storage Monitoring - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Storage & System Status</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Centralized LAN file repository capacity, automated PostgreSQL backups, and department utilization.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-secondary btn-sm" onclick="showToast('Diagnostic ping sent to NAS storage cluster: Healthy');">
+      Test Storage Ping
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="showToast('Automated system snapshot triggered.');">
+      Trigger Backup Now
+    </button>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Total Storage Capacity</span>
+    <span class="stat-value">{{ storage_stats.total_capacity_gb }} GB</span>
+    <span class="stat-meta">Dedicated central server disk</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Storage Used</span>
+    <span class="stat-value" style="color: var(--primary);">{{ storage_stats.used_storage_gb }} GB</span>
+    <span class="stat-meta">{{ storage_stats.usage_percentage }}% utilized</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Available Free Space</span>
+    <span class="stat-value" style="color: var(--success);">{{ storage_stats.free_storage_gb }} GB</span>
+    <span class="stat-meta">Safe operational headroom</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Database Backup Status</span>
+    <span class="stat-value" style="font-size: 18px; color: var(--success);">Active / Healthy</span>
+    <span class="stat-meta">{{ storage_stats.db_backup_status }}</span>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 20px;">
+  <!-- Department breakdown card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Department Disk Consumption</h2>
+      <span style="font-size: 12px; color: var(--text-secondary);">Relative volume consumption</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      {% for dept in storage_stats.breakdown %}
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+          <div>
+            <strong style="color: var(--text-primary);">{{ dept.name }}</strong>
+            <span style="color: var(--text-secondary); font-size: 12px; margin-left: 6px;">({{ dept.percentage }}%)</span>
+          </div>
+          <span style="font-weight: 600;">{{ dept.used_gb }} GB</span>
+        </div>
+        <div class="progress-bar-bg" style="height: 10px;">
+          <div class="progress-bar-fill" style="width: {{ dept.percentage }}%; background-color: {{ dept.color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- System Infrastructure Health Details -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Infrastructure Health</h2>
+      <span class="badge badge-published">Operational</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+      <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+        <span style="color: var(--text-secondary);">File Storage Target</span>
+        <span style="font-weight: 500;">Central Server Array / NAS</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+        <span style="color: var(--text-secondary);">NAS Connection</span>
+        <span style="font-weight: 500;">{{ storage_stats.nas_connection }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+        <span style="color: var(--text-secondary);">Database Engine</span>
+        <span style="font-weight: 500;">PostgreSQL (Ready for Phase 2)</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+        <span style="color: var(--text-secondary);">Max Concurrent Terminals</span>
+        <span style="font-weight: 500;">20 LAN Workstations</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-secondary);">Automated Recycle Bin Pruning</span>
+        <span style="font-weight: 500;">Every night at 02:00 AM</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

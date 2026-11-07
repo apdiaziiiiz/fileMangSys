@@ -1,0 +1,117 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Permission Matrix - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Role & Permission Control (RBAC)</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Comprehensive RBAC matrix combined with individual grants, scope limitations, and folder policies.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="showToast('Permission policies synchronized.');">Save Permission Matrix</button>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title">Default Role Capabilities</h2>
+    <span style="font-size: 12px; color: var(--text-secondary);">Super Admin privileges are strictly locked by system design</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>System Role</th>
+          <th>Active Users</th>
+          <th>Scope Boundary</th>
+          <th style="text-align: center;">Direct Upload</th>
+          <th style="text-align: center;">Approve / Reject</th>
+          <th style="text-align: center;">Delete Files</th>
+          <th style="text-align: center;">User Mgmt</th>
+          <th style="text-align: center;">Audit Logs</th>
+          <th style="text-align: center;">Recycle Bin</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in roles_permissions %}
+        <tr>
+          <td>
+            <strong style="font-size: 13px;">{{ r.role }}</strong>
+          </td>
+          <td>{{ r.user_count }} users</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ r.scope }}</td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_upload %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_approve %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_delete %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_manage_users %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_view_audit %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+          <td style="text-align: center;">
+            <input type="checkbox" {% if r.can_restore_bin %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Individual User Permission Overrides (Specification Section 4) -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Individual User Permission Overrides</h2>
+    <span style="font-size: 12px; color: var(--text-secondary);">Explicit individual rules take precedence over general role permissions</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Department Scope</th>
+          <th>Explicit Grants</th>
+          <th>Explicit Denials</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight: 500;">Ahmed Al-Mansoor</td>
+          <td>Super Admin</td>
+          <td>Global</td>
+          <td><span class="badge badge-published">ALL_CAPABILITIES</span></td>
+          <td style="color: var(--text-secondary);">&mdash;</td>
+          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" disabled>Locked</button></td>
+        </tr>
+        <tr>
+          <td style="font-weight: 500;">Mohamed (Employee)</td>
+          <td>Employee</td>
+          <td>Human Resources</td>
+          <td><span class="badge badge-published">READ_HR_DOCS</span></td>
+          <td><span class="badge badge-rejected">DENY_DOWNLOAD</span></td>
+          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit rule modal.')">Edit Rule</button></td>
+        </tr>
+        <tr>
+          <td style="font-weight: 500;">Ahmed (Employee)</td>
+          <td>Employee</td>
+          <td>Finance</td>
+          <td><span class="badge badge-published">UPLOAD_FINANCE</span></td>
+          <td><span class="badge badge-rejected">DENY_DELETE</span></td>
+          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit rule modal.')">Edit Rule</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

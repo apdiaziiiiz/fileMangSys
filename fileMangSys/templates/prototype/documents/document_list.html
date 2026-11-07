@@ -1,0 +1,102 @@
+{% extends 'prototype/base.html' %}
+{% block title %}All Documents - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Document Directory</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Comprehensive repository listing across all authorized departments.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" data-modal-target="uploadModal">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload Document
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <!-- Filter Toolbar -->
+  <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 200px;">
+      <select id="filterDepartment" class="form-control" style="padding: 7px 10px;">
+        <option value="">All Departments</option>
+        <option value="Finance">Finance</option>
+        <option value="Human Resources">Human Resources</option>
+        <option value="IT & Infrastructure">IT & Infrastructure</option>
+        <option value="Administration">Administration</option>
+        <option value="Projects & Engineering">Projects & Engineering</option>
+      </select>
+    </div>
+    <div style="width: 150px;">
+      <select id="filterFileType" class="form-control" style="padding: 7px 10px;">
+        <option value="">All Formats</option>
+        <option value="pdf">PDF</option>
+        <option value="docx">Word (.docx)</option>
+        <option value="xlsx">Excel (.xlsx)</option>
+        <option value="png">PNG Image</option>
+      </select>
+    </div>
+    <div style="width: 150px;">
+      <select id="filterStatus" class="form-control" style="padding: 7px 10px;">
+        <option value="">All Statuses</option>
+        <option value="Published">Published</option>
+        <option value="Pending">Pending</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th data-sort>Title / Filename</th>
+          <th>Department</th>
+          <th>Owner</th>
+          <th>Doc Date</th>
+          <th>Size</th>
+          <th>Version</th>
+          <th>Status</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr data-searchable-row data-department="{{ doc.department }}" data-type="{{ doc.file_type }}" data-status="{{ doc.status }}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {{ doc.objective }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.department }}</td>
+          <td>{{ doc.owner }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
+          <td>{{ doc.file_size }}</td>
+          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+          <td>
+            {% if doc.status == 'Published' %}
+              <span class="badge badge-published">Published</span>
+            {% elif doc.status == 'Pending' %}
+              <span class="badge badge-pending">Pending</span>
+            {% else %}
+              <span class="badge badge-rejected">Rejected</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
+            <a href="{% url 'version_history' doc.id %}" class="btn btn-secondary btn-sm">Versions</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

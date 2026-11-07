@@ -1,0 +1,68 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Version History - {{ doc.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+      <a href="{% url 'document_detail' doc.id %}" style="font-size: 12px; color: var(--text-secondary);">&larr; Back to {{ doc.title }}</a>
+    </div>
+    <h1 class="page-title">Version History: {{ doc.title }}</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Document ID: <code>{{ doc.id }}</code> &bull; Preserves every revision without erasing previous files.</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="alert('In Prototype: Upload new revision file to create next version number.');">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload New Version
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Stored Revisions</h2>
+    <span style="font-size: 12px; color: var(--text-secondary);">Current published version is marked with badge</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Uploaded By</th>
+          <th>Revision Timestamp</th>
+          <th>File Size</th>
+          <th>Revision Note</th>
+          <th>State</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ver in doc.versions %}
+        <tr>
+          <td>
+            <span style="font-weight: 700; font-family: monospace; font-size: 13px; color: var(--primary);">{{ ver.version }}</span>
+          </td>
+          <td style="font-weight: 500;">{{ ver.uploaded_by }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ ver.date }}</td>
+          <td>{{ ver.size }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ ver.note }}</td>
+          <td>
+            {% if ver.is_current %}
+              <span class="badge badge-published">Current Published</span>
+            {% else %}
+              <span class="badge badge-neutral">Archived Revision</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-secondary btn-sm" onclick="alert('Simulated download for {{ doc.title }} ({{ ver.version }})')">
+              Download {{ ver.version }}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

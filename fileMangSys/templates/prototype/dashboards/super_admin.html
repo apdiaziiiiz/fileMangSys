@@ -1,0 +1,156 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Super Admin Dashboard - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Super Administrator Dashboard</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">System-wide document overview, central storage capacity, and department health.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'storage_monitoring' %}" class="btn btn-secondary">Storage Health</a>
+    <button class="btn btn-primary" data-modal-target="uploadModal">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Upload Document
+    </button>
+  </div>
+</div>
+
+<!-- 4 Key Stat Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Total Documents</span>
+    <span class="stat-value">{{ total_documents }}</span>
+    <span class="stat-meta" style="color: var(--success);">Across all 5 departments</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Storage Usage</span>
+    <span class="stat-value">{{ storage_stats.used_storage_gb }} GB</span>
+    <span class="stat-meta">{{ storage_stats.usage_percentage }}% of {{ storage_stats.total_capacity_gb }} GB LAN capacity</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Active Users</span>
+    <span class="stat-value">{{ total_users }}</span>
+    <span class="stat-meta">Across 20 authorized terminals</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Pending Approvals</span>
+    <span class="stat-value" style="color: var(--primary);">{{ pending_approvals }}</span>
+    <span class="stat-meta"><a href="{% url 'approvals_list' %}" style="color: var(--primary); font-weight: 500;">Review submissions &rarr;</a></span>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+  <!-- Recent Uploads Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent Uploaded Documents</h2>
+      <a href="{% url 'document_list' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">View all</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Department</th>
+            <th>Version</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in recent_uploads %}
+          <tr data-searchable-row>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+                <div>
+                  <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">By {{ doc.uploaded_by }} &bull; {{ doc.file_size }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ doc.department }}</td>
+            <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
+            <td>
+              {% if doc.status == 'Published' %}
+                <span class="badge badge-published">Published</span>
+              {% elif doc.status == 'Pending' %}
+                <span class="badge badge-pending">Pending</span>
+              {% else %}
+                <span class="badge badge-rejected">Rejected</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right;">
+              <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Department Storage Breakdown -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Department Storage</h2>
+      <a href="{% url 'department_list' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Details</a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      {% for dept in storage_stats.breakdown %}
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
+          <span style="font-weight: 500;">{{ dept.name }}</span>
+          <span style="color: var(--text-secondary);">{{ dept.used_gb }} GB ({{ dept.percentage }}%)</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: {{ dept.percentage }}%; background-color: {{ dept.color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 12px;">
+      <span style="color: var(--text-secondary);">Recycle Bin Retention</span>
+      <span style="font-weight: 500;"><a href="{% url 'recycle_bin' %}" style="color: var(--primary);">{{ recycle_bin_count }} items recoverable</a></span>
+    </div>
+  </div>
+</div>
+
+<!-- System Activity Feed -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent System Audit Trail</h2>
+    <a href="{% url 'activity_logs' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Full logs &rarr;</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Action</th>
+          <th>Target Object</th>
+          <th>Client IP</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_activity %}
+        <tr>
+          <td style="font-weight: 500;">{{ log.user }}</td>
+          <td><span class="badge badge-neutral">{{ log.role }}</span></td>
+          <td>{{ log.action }}</td>
+          <td style="font-family: monospace; font-size: 12px;">{{ log.target }}</td>
+          <td style="color: var(--text-secondary); font-size: 11px;">{{ log.ip }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ log.timestamp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

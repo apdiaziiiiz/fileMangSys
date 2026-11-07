@@ -1,0 +1,60 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Document Approvals - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Approval & Review Workflow</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Review employee-submitted documents. Authorized Admins or Super Admins can sign-off or decline.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Pending Submissions ({{ pending_documents|length }})</h2>
+    <span style="font-size: 12px; color: var(--text-secondary);">Decisions immediately update document lifecycle state</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Submitted Document</th>
+          <th>Department</th>
+          <th>Folder</th>
+          <th>Objective</th>
+          <th>Submitted By</th>
+          <th>Submitted Date</th>
+          <th style="text-align: right;">Review Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in pending_documents %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary);">Size: {{ doc.file_size }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.department }}</td>
+          <td>{{ doc.folder }}</td>
+          <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+            {{ doc.objective }}
+          </td>
+          <td style="font-weight: 500;">{{ doc.uploaded_by }}</td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-sm btn-primary" data-action-approve>Approve & Publish</button>
+            <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

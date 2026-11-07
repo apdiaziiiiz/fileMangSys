@@ -1,0 +1,153 @@
+{% extends 'prototype/base.html' %}
+{% block title %}Search Documents - Enterprise DMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Quick & Advanced Search</h1>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Live multi-attribute query across filename, objectives, departments, owners, and dates.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+  <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+    <div>
+      <label class="form-label">Search Query (Filename or Objective)</label>
+      <input type="text" id="liveSearchQuery" class="form-control" placeholder="Type keywords e.g. Audit, Architecture, Budget, Policies...">
+    </div>
+    <div>
+      <label class="form-label">Filter Department</label>
+      <select id="advFilterDept" class="form-control">
+        <option value="">All Departments</option>
+        <option value="Finance">Finance</option>
+        <option value="Human Resources">Human Resources</option>
+        <option value="IT & Infrastructure">IT & Infrastructure</option>
+        <option value="Administration">Administration</option>
+        <option value="Projects & Engineering">Projects & Engineering</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">File Type</label>
+      <select id="advFilterType" class="form-control">
+        <option value="">All Types</option>
+        <option value="pdf">PDF Document (.pdf)</option>
+        <option value="docx">Word (.docx)</option>
+        <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+        <option value="png">PNG / JPG Image</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+    <div>
+      <label class="form-label">Owner / Responsibility</label>
+      <input type="text" id="advFilterOwner" class="form-control" placeholder="e.g. Finance, Sara, IT...">
+    </div>
+    <div>
+      <label class="form-label">Document Date (From)</label>
+      <input type="date" class="form-control" value="2026-01-01">
+    </div>
+    <div>
+      <label class="form-label">Document Date (To)</label>
+      <input type="date" class="form-control" value="2026-12-31">
+    </div>
+  </div>
+</div>
+
+<!-- Search Results Table -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Live Matching Documents</h2>
+    <span id="matchCountIndicator" style="font-size: 12px; color: var(--text-secondary);">Showing {{ documents|length }} records</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table" id="searchResultsTable">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Department</th>
+          <th>Owner</th>
+          <th>Objective</th>
+          <th>Doc Date</th>
+          <th>Version</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr data-search-row data-department="{{ doc.department }}" data-type="{{ doc.file_type }}" data-owner="{{ doc.owner }}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
+              <div>
+                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);" class="doc-title-text">{{ doc.title }}</a>
+                <div style="font-size: 11px; color: var(--text-secondary);">{{ doc.file_size }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ doc.department }}</td>
+          <td>{{ doc.owner }}</td>
+          <td class="doc-obj-text" style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+            {{ doc.objective }}
+          </td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
+          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
+          <td style="text-align: right;">
+            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Advanced live search linking all inputs
+  const liveInput = document.getElementById('liveSearchQuery');
+  const deptSelect = document.getElementById('advFilterDept');
+  const typeSelect = document.getElementById('advFilterType');
+  const ownerInput = document.getElementById('advFilterOwner');
+  const rows = document.querySelectorAll('[data-search-row]');
+  const countIndicator = document.getElementById('matchCountIndicator');
+
+  function runFilter() {
+    const q = liveInput.value.toLowerCase().trim();
+    const d = deptSelect.value.toLowerCase();
+    const t = typeSelect.value.toLowerCase();
+    const o = ownerInput.value.toLowerCase().trim();
+
+    let matches = 0;
+    rows.forEach(r => {
+      const text = r.innerText.toLowerCase();
+      const rDept = (r.getAttribute('data-department') || '').toLowerCase();
+      const rType = (r.getAttribute('data-type') || '').toLowerCase();
+      const rOwner = (r.getAttribute('data-owner') || '').toLowerCase();
+
+      const matchQ = !q || text.includes(q);
+      const matchD = !d || rDept === d;
+      const matchT = !t || rType === t;
+      const matchO = !o || rOwner.includes(o);
+
+      if (matchQ && matchD && matchT && matchO) {
+        r.style.display = '';
+        matches++;
+      } else {
+        r.style.display = 'none';
+      }
+    });
+
+    if (countIndicator) {
+      countIndicator.innerText = `Showing ${matches} matching records`;
+    }
+  }
+
+  liveInput.addEventListener('input', runFilter);
+  deptSelect.addEventListener('change', runFilter);
+  typeSelect.addEventListener('change', runFilter);
+  ownerInput.addEventListener('input', runFilter);
+</script>
+{% endblock %}
