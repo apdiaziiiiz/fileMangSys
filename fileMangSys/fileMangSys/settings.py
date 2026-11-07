@@ -129,9 +129,10 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# File Storage Paths (LAN centralized repository)
+# File Storage Paths (Central file repository)
+STORAGE_ROOT = Path(os.getenv('FILE_STORAGE_DIR', r'C:\fileMngSys'))
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'storage_central'
+MEDIA_ROOT = STORAGE_ROOT
 
 # Email
 MAILERS = {
