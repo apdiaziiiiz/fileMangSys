@@ -29,36 +29,51 @@
           <th>Designated Manager</th>
           <th>Staff Count</th>
           <th>Files Count</th>
-          <th>Storage Used / Quota</th>
+          <th>Storage Quota</th>
           <th>Status</th>
           <th style="text-align: right;">Action</th>
         </tr>
       </thead>
       <tbody>
-        {% for dept in departments %}
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px;">{{ dept.code }}</span>
-              <strong style="font-size: 13px;">{{ dept.name }}</strong>
-            </div>
-          </td>
-          <td>{{ dept.manager }}</td>
-          <td>{{ dept.users_count }} users</td>
-          <td>{{ dept.files_count }} files</td>
-          <td>
-            <div style="font-size: 12px;">{{ dept.storage_used_mb }} MB / {{ dept.max_quota_mb }} MB</div>
-            <div class="progress-bar-bg" style="height: 5px; width: 120px; margin-top: 4px;">
-              <div class="progress-bar-fill" style="width: 60%;"></div>
-            </div>
-          </td>
-          <td><span class="badge badge-published">{{ dept.status }}</span></td>
-          <td style="text-align: right; white-space: nowrap;">
-            <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit quota & folders for {{ dept.name }}');">Configure</button>
-            <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Manage staff assignments for {{ dept.name }}');">Assign Staff</button>
-          </td>
-        </tr>
-        {% endfor %}
+        {% if departments %}
+          {% for dept in departments %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px;">{{ dept.code }}</span>
+                <strong style="font-size: 13px;">{{ dept.name }}</strong>
+              </div>
+            </td>
+            <td>{{ dept.manager.full_name|default:'Unassigned' }}</td>
+            <td>{{ dept.primary_users.count|default:0 }} users</td>
+            <td>{{ dept.documents.count|default:0 }} files</td>
+            <td>
+              <div style="font-size: 12px;">{{ dept.max_quota_mb }} MB limit</div>
+            </td>
+            <td>
+              {% if dept.is_active %}
+                <span class="badge badge-published">Active</span>
+              {% else %}
+                <span class="badge badge-rejected">Inactive</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit quota & folders for {{ dept.name }}');">Configure</button>
+              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Manage staff assignments for {{ dept.name }}');">Assign Staff</button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">🏢</div>
+                <div class="empty-state-title">No departments have been created yet.</div>
+                <div class="empty-state-text">Click "Add Department" to register organizational divisions and allocate their storage quotas.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

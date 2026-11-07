@@ -7,37 +7,37 @@
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
       <a href="{% url 'document_list' %}" style="font-size: 12px; color: var(--text-secondary);">&larr; Back to documents</a>
       <span style="color: var(--border-color);">/</span>
-      <span style="font-size: 12px; color: var(--text-secondary);">{{ doc.department }}</span>
+      <span style="font-size: 12px; color: var(--text-secondary);">{{ doc.department.name }}</span>
     </div>
     <h1 class="page-title">{{ doc.title }}</h1>
   </div>
   <div class="page-actions">
-    <a href="{% url 'version_history' doc.id %}" class="btn btn-secondary">
+    <a href="{% url 'version_history' doc.doc_id %}" class="btn btn-secondary">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Version History ({{ doc.versions|length }})
+      Version History ({{ versions|length }})
     </a>
-    <a href="{% url 'share_interface' doc.id %}" class="btn btn-secondary">
+    <a href="{% url 'share_interface' doc.doc_id %}" class="btn btn-secondary">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       Manage Sharing
     </a>
     <button class="btn btn-primary" onclick="alert('File download simulated for: {{ doc.title }}');">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download Current ({{ doc.current_version }})
+      Download File
     </button>
   </div>
 </div>
 
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-  <!-- Main Document Metadata Card (Specification Section 7) -->
+  <!-- Main Document Metadata Card -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">Document Metadata</h2>
-      {% if doc.status == 'Published' %}
+      {% if doc.status == 'PUBLISHED' %}
         <span class="badge badge-published">Published</span>
-      {% elif doc.status == 'Pending' %}
+      {% elif doc.status == 'PENDING' %}
         <span class="badge badge-pending">Pending Approval</span>
       {% else %}
-        <span class="badge badge-rejected">Rejected</span>
+        <span class="badge badge-rejected">{{ doc.status }}</span>
       {% endif %}
     </div>
 
@@ -51,75 +51,84 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <div>
         <span style="font-size: 11px; color: var(--text-secondary);">Permanent Document ID</span>
-        <div style="font-weight: 600; font-family: monospace; font-size: 13px;">{{ doc.id }}</div>
+        <div style="font-weight: 600; font-family: monospace; font-size: 13px;">{{ doc.doc_id }}</div>
       </div>
       <div>
         <span style="font-size: 11px; color: var(--text-secondary);">Original Filename</span>
         <div style="font-weight: 500;">{{ doc.original_filename }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Department / Top Directory</span>
-        <div style="font-weight: 500;">{{ doc.department }}</div>
+        <span style="font-size: 11px; color: var(--text-secondary);">Department</span>
+        <div style="font-weight: 500;">{{ doc.department.name }}</div>
       </div>
       <div>
         <span style="font-size: 11px; color: var(--text-secondary);">Target Folder</span>
-        <div style="font-weight: 500;">📁 {{ doc.folder }}</div>
+        <div style="font-weight: 500;">📁 {{ doc.folder.name|default:'General' }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Owner</span>
+        <span style="font-size: 11px; color: var(--text-secondary);">Owner / Team</span>
         <div style="font-weight: 500;">{{ doc.owner }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Document Date (Associated)</span>
+        <span style="font-size: 11px; color: var(--text-secondary);">Associated Document Date</span>
         <div style="font-weight: 500;">{{ doc.document_date }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Uploaded By (System Logged)</span>
-        <div style="font-weight: 500;">{{ doc.uploaded_by }}</div>
+        <span style="font-size: 11px; color: var(--text-secondary);">Uploaded By</span>
+        <div style="font-weight: 500;">{{ doc.created_by.full_name|default:doc.created_by.email }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Uploaded Timestamp (System Logged)</span>
-        <div style="font-weight: 500;">{{ doc.uploaded_date }}</div>
-      </div>
-      <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">File Type / Size</span>
-        <div style="font-weight: 500;">{{ doc.file_type|upper }} &bull; {{ doc.file_size }}</div>
-      </div>
-      <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Active Version</span>
-        <div style="font-weight: 600; color: var(--primary);">{{ doc.current_version }}</div>
+        <span style="font-size: 11px; color: var(--text-secondary);">System Upload Timestamp</span>
+        <div style="font-weight: 500;">{{ doc.created_at|date:"Y-m-d H:i" }}</div>
       </div>
     </div>
-
-    {% if doc.rejection_reason %}
-    <div style="margin-top: 20px; padding: 12px 14px; background-color: var(--danger-bg); border-radius: var(--radius-md); border-left: 4px solid var(--danger);">
-      <div style="font-weight: 600; color: var(--danger); font-size: 12px;">Rejection Explanation</div>
-      <div style="font-size: 13px; color: var(--text-primary); margin-top: 4px;">{{ doc.rejection_reason }}</div>
-      <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Reviewed by {{ doc.reviewed_by }} on {{ doc.review_date }}</div>
-    </div>
-    {% endif %}
   </div>
 
-  <!-- Document Preview & Conflict Info Panel -->
+  <!-- Revisions & Sharing Sidebar -->
   <div style="display: flex; flex-direction: column; gap: 20px;">
-    <!-- Preview Box -->
-    <div class="card" style="text-align: center; padding: 30px 20px;">
-      <div style="font-size: 42px; margin-bottom: 10px;">📄</div>
-      <h3 style="font-size: 14px; font-weight: 600;">Document Preview Ready</h3>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 16px;">
-        Format: {{ doc.file_type|upper }} &bull; Verified integrity on LAN storage
-      </p>
-      <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Interactive viewer window opened.')" style="margin: 0 auto;">
-        Open Interactive Preview
-      </button>
+    <!-- Active Version -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Stored Revisions</h2>
+        <a href="{% url 'version_history' doc.doc_id %}" style="font-size: 12px; color: var(--primary);">View all</a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        {% if versions %}
+          {% for ver in versions %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-subtle); border-radius: var(--radius-sm);">
+            <div>
+              <span style="font-weight: 600; font-family: monospace; color: var(--primary);">V{{ ver.version_number }}</span>
+              <span style="font-size: 11px; color: var(--text-secondary); margin-left: 6px;">{{ ver.uploaded_at|date:"Y-m-d" }}</span>
+            </div>
+            {% if ver.is_current %}
+              <span class="badge badge-published" style="font-size: 10px;">Current</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="font-size: 12px; color: var(--text-secondary); padding: 8px;">No extra revision records.</div>
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Multi-User Simultaneous Conflict Guard (Specification Section 17) -->
-    <div class="card" style="border-left: 4px solid var(--primary);">
-      <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Version Conflict Guard</h3>
-      <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
-        Simultaneous updates detect if another workstation submitted a newer revision before saving, preventing unnoticed overwrites across 20 network terminals.
-      </p>
+    <!-- Active Shares -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Internal Shares</h2>
+        <a href="{% url 'share_interface' doc.doc_id %}" style="font-size: 12px; color: var(--primary);">Manage</a>
+      </div>
+      {% if shares %}
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for share in shares %}
+          <div style="font-size: 12px; display: flex; justify-content: space-between;">
+            <span>{{ share.shared_with.full_name }}</span>
+            <span class="badge badge-neutral">{{ share.permission_level }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="font-size: 12px; color: var(--text-secondary);">Not shared with any specific users.</div>
+      {% endif %}
     </div>
   </div>
 </div>

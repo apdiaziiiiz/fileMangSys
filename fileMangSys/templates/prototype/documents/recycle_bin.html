@@ -29,38 +29,50 @@
           <th>Original Folder</th>
           <th>Deleted By</th>
           <th>Deleted Date</th>
-          <th>Days Remaining</th>
+          <th>Status</th>
           <th style="text-align: right;">Recovery</th>
         </tr>
       </thead>
       <tbody>
-        {% for item in deleted_items %}
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge" style="background-color: #FEE2E2; color: #DC2626;">DEL</span>
-              <div>
-                <span style="font-weight: 500;">{{ item.title }}</span>
-                <div style="font-size: 11px; color: var(--text-secondary);">{{ item.size }} &bull; ID: {{ item.id }}</div>
+        {% if deleted_items %}
+          {% for item in deleted_items %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge" style="background-color: #FEE2E2; color: #DC2626;">DEL</span>
+                <div>
+                  <span style="font-weight: 500;">{{ item.title }}</span>
+                  <div style="font-size: 11px; color: var(--text-secondary);">ID: {{ item.doc_id }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ item.department }}</td>
-          <td>📁 {{ item.original_folder }}</td>
-          <td style="font-weight: 500;">{{ item.deleted_by }}</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ item.deleted_date }}</td>
-          <td>
-            <span class="badge" style="background-color: #FEF3C7; color: #D97706; font-weight: 600;">
-              {{ item.days_remaining }} days left
-            </span>
-          </td>
-          <td style="text-align: right;">
-            <button class="btn btn-sm btn-primary" onclick="this.closest('tr').remove(); showToast('Document successfully restored to original folder.');">
-              Restore Document
-            </button>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td>{{ item.department.name }}</td>
+            <td>📁 {{ item.folder.name|default:'General' }}</td>
+            <td style="font-weight: 500;">{{ item.deleted_by.full_name|default:'User' }}</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ item.deleted_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <span class="badge" style="background-color: #FEF3C7; color: #D97706; font-weight: 600;">
+                Soft-Deleted
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <button class="btn btn-sm btn-primary" onclick="this.closest('tr').remove(); showToast('Document successfully restored to original folder.');">
+                Restore Document
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">🗑️</div>
+                <div class="empty-state-title">Recycle bin is empty.</div>
+                <div class="empty-state-text">No documents have been soft-deleted. Deleted documents remain recoverable here for 30 days.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

@@ -19,11 +19,9 @@
       <label class="form-label">Filter Department</label>
       <select id="advFilterDept" class="form-control">
         <option value="">All Departments</option>
-        <option value="Finance">Finance</option>
-        <option value="Human Resources">Human Resources</option>
-        <option value="IT & Infrastructure">IT & Infrastructure</option>
-        <option value="Administration">Administration</option>
-        <option value="Projects & Engineering">Projects & Engineering</option>
+        {% for dept in departments %}
+          <option value="{{ dept.name }}">{{ dept.name }}</option>
+        {% endfor %}
       </select>
     </div>
     <div>
@@ -41,15 +39,15 @@
   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
     <div>
       <label class="form-label">Owner / Responsibility</label>
-      <input type="text" id="advFilterOwner" class="form-control" placeholder="e.g. Finance, Sara, IT...">
+      <input type="text" id="advFilterOwner" class="form-control" placeholder="Search by author, team or owner...">
     </div>
     <div>
       <label class="form-label">Document Date (From)</label>
-      <input type="date" class="form-control" value="2026-01-01">
+      <input type="date" class="form-control">
     </div>
     <div>
       <label class="form-label">Document Date (To)</label>
-      <input type="date" class="form-control" value="2026-12-31">
+      <input type="date" class="form-control">
     </div>
   </div>
 </div>
@@ -58,46 +56,66 @@
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">Live Matching Documents</h2>
-    <span id="matchCountIndicator" style="font-size: 12px; color: var(--text-secondary);">Showing {{ documents|length }} records</span>
+    <span id="searchResultsCount" style="font-size: 12px; color: var(--text-secondary);">Showing {{ documents|length }} records</span>
   </div>
 
   <div class="table-responsive">
-    <table class="table" id="searchResultsTable">
+    <table class="table">
       <thead>
         <tr>
           <th>Document</th>
           <th>Department</th>
           <th>Owner</th>
-          <th>Objective</th>
           <th>Doc Date</th>
           <th>Version</th>
+          <th>Status</th>
           <th style="text-align: right;">Action</th>
         </tr>
       </thead>
-      <tbody>
-        {% for doc in documents %}
-        <tr data-search-row data-department="{{ doc.department }}" data-type="{{ doc.file_type }}" data-owner="{{ doc.owner }}">
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <div>
-                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);" class="doc-title-text">{{ doc.title }}</a>
-                <div style="font-size: 11px; color: var(--text-secondary);">{{ doc.file_size }}</div>
+      <tbody id="searchResultsTableBody">
+        {% if documents %}
+          {% for doc in documents %}
+          <tr data-search-row data-filename="{{ doc.title }}" data-objective="{{ doc.objective }}" data-dept="{{ doc.department.name }}" data-owner="{{ doc.owner }}">
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500;">{{ doc.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary); max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ doc.objective }}
+                  </div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ doc.department }}</td>
-          <td>{{ doc.owner }}</td>
-          <td class="doc-obj-text" style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
-            {{ doc.objective }}
-          </td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
-          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
-          <td style="text-align: right;">
-            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td>{{ doc.department.name }}</td>
+            <td style="font-size: 13px;">{{ doc.owner }}</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
+            <td><span class="badge badge-neutral">V1</span></td>
+            <td>
+              {% if doc.status == 'PUBLISHED' %}
+                <span class="badge badge-published">Published</span>
+              {% elif doc.status == 'PENDING' %}
+                <span class="badge badge-pending">Pending</span>
+              {% else %}
+                <span class="badge badge-rejected">{{ doc.status }}</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right;">
+              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm">Inspect</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-title">No documents have been uploaded yet.</div>
+                <div class="empty-state-text">Once documents are added to the repository, you can perform instant live searches across titles, objectives, and metadata.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
@@ -106,48 +124,46 @@
 
 {% block extra_js %}
 <script>
-  // Advanced live search linking all inputs
-  const liveInput = document.getElementById('liveSearchQuery');
-  const deptSelect = document.getElementById('advFilterDept');
-  const typeSelect = document.getElementById('advFilterType');
-  const ownerInput = document.getElementById('advFilterOwner');
+  // Live Search filter logic
+  const queryInput = document.getElementById('liveSearchQuery');
+  const deptFilter = document.getElementById('advFilterDept');
+  const typeFilter = document.getElementById('advFilterType');
+  const ownerFilter = document.getElementById('advFilterOwner');
   const rows = document.querySelectorAll('[data-search-row]');
-  const countIndicator = document.getElementById('matchCountIndicator');
+  const countBadge = document.getElementById('searchResultsCount');
 
-  function runFilter() {
-    const q = liveInput.value.toLowerCase().trim();
-    const d = deptSelect.value.toLowerCase();
-    const t = typeSelect.value.toLowerCase();
-    const o = ownerInput.value.toLowerCase().trim();
+  function filterSearch() {
+    const q = queryInput ? queryInput.value.toLowerCase().trim() : '';
+    const d = deptFilter ? deptFilter.value.toLowerCase().trim() : '';
+    const o = ownerFilter ? ownerFilter.value.toLowerCase().trim() : '';
+    let matchCount = 0;
 
-    let matches = 0;
     rows.forEach(r => {
-      const text = r.innerText.toLowerCase();
-      const rDept = (r.getAttribute('data-department') || '').toLowerCase();
-      const rType = (r.getAttribute('data-type') || '').toLowerCase();
-      const rOwner = (r.getAttribute('data-owner') || '').toLowerCase();
+      const filename = (r.getAttribute('data-filename') || '').toLowerCase();
+      const obj = (r.getAttribute('data-objective') || '').toLowerCase();
+      const dept = (r.getAttribute('data-dept') || '').toLowerCase();
+      const owner = (r.getAttribute('data-owner') || '').toLowerCase();
 
-      const matchQ = !q || text.includes(q);
-      const matchD = !d || rDept === d;
-      const matchT = !t || rType === t;
-      const matchO = !o || rOwner.includes(o);
+      const matchesQ = !q || filename.includes(q) || obj.includes(q);
+      const matchesD = !d || dept === d;
+      const matchesO = !o || owner.includes(o);
 
-      if (matchQ && matchD && matchT && matchO) {
+      if (matchesQ && matchesD && matchesO) {
         r.style.display = '';
-        matches++;
+        matchCount++;
       } else {
         r.style.display = 'none';
       }
     });
 
-    if (countIndicator) {
-      countIndicator.innerText = `Showing ${matches} matching records`;
+    if (countBadge) {
+      countBadge.innerText = `Showing ${matchCount} records`;
     }
   }
 
-  liveInput.addEventListener('input', runFilter);
-  deptSelect.addEventListener('change', runFilter);
-  typeSelect.addEventListener('change', runFilter);
-  ownerInput.addEventListener('input', runFilter);
+  if (queryInput) queryInput.addEventListener('input', filterSearch);
+  if (deptFilter) deptFilter.addEventListener('change', filterSearch);
+  if (typeFilter) typeFilter.addEventListener('change', filterSearch);
+  if (ownerFilter) ownerFilter.addEventListener('input', filterSearch);
 </script>
 {% endblock %}

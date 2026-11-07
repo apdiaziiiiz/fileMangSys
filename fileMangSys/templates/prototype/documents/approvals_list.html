@@ -29,30 +29,42 @@
         </tr>
       </thead>
       <tbody>
-        {% for doc in pending_documents %}
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <div>
-                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
-                <div style="font-size: 11px; color: var(--text-secondary);">Size: {{ doc.file_size }}</div>
+        {% if pending_documents %}
+          {% for req in pending_documents %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' req.document.doc_id %}" style="font-weight: 500; color: var(--text-primary);">{{ req.document.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">Doc ID: {{ req.document.doc_id }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ doc.department }}</td>
-          <td>{{ doc.folder }}</td>
-          <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
-            {{ doc.objective }}
-          </td>
-          <td style="font-weight: 500;">{{ doc.uploaded_by }}</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
-          <td style="text-align: right; white-space: nowrap;">
-            <button class="btn btn-sm btn-primary" data-action-approve>Approve & Publish</button>
-            <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td>{{ req.document.department.name }}</td>
+            <td>📁 {{ req.document.folder.name|default:'General' }}</td>
+            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+              {{ req.document.objective }}
+            </td>
+            <td style="font-weight: 500;">{{ req.submitted_by.full_name|default:req.submitted_by.email }}</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ req.submitted_at|date:"Y-m-d H:i" }}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-sm btn-primary" data-action-approve>Approve & Publish</button>
+              <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">✅</div>
+                <div class="empty-state-title">No pending approval requests.</div>
+                <div class="empty-state-text">Employee document submissions requiring management sign-off will be listed here.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

@@ -5,11 +5,11 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Administrator Dashboard</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Assigned Departments: <strong>Finance, IT & Infrastructure</strong></p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Assigned Departmental Scope & Approval Center</p>
   </div>
   <div class="page-actions">
     <a href="{% url 'approvals_list' %}" class="btn btn-secondary">
-      Pending Approvals <span class="badge badge-pending" style="margin-left: 4px;">2</span>
+      Pending Approvals <span class="badge badge-pending" style="margin-left: 4px;">{{ pending_documents|length }}</span>
     </a>
   </div>
 </div>
@@ -17,23 +17,23 @@
 <div class="stats-grid">
   <div class="stat-card">
     <span class="stat-label">Documents (Assigned Scope)</span>
-    <span class="stat-value">357</span>
-    <span class="stat-meta">Finance & IT folders</span>
+    <span class="stat-value">{{ total_scope_documents }}</span>
+    <span class="stat-meta">Active departmental documents</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">Pending Submissions</span>
-    <span class="stat-value" style="color: var(--primary);">2</span>
+    <span class="stat-value" style="color: var(--primary);">{{ pending_documents|length }}</span>
     <span class="stat-meta">Requires Admin sign-off</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">Assigned Storage</span>
-    <span class="stat-value">80.7 GB</span>
-    <span class="stat-meta">Across 2 assigned departments</span>
+    <span class="stat-value">0.0 GB</span>
+    <span class="stat-meta">Active storage consumption</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">Managed Users</span>
-    <span class="stat-value">11 Users</span>
-    <span class="stat-meta">Employees & Managers</span>
+    <span class="stat-value">{{ managed_users_count }}</span>
+    <span class="stat-meta">Departmental personnel</span>
   </div>
 </div>
 
@@ -55,29 +55,41 @@
         </tr>
       </thead>
       <tbody>
-        {% for doc in pending_documents %}
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <div>
-                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
-                <div style="font-size: 11px; color: var(--text-secondary);">Size: {{ doc.file_size }}</div>
+        {% if pending_documents %}
+          {% for req in pending_documents %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' req.document.doc_id %}" style="font-weight: 500; color: var(--text-primary);">{{ req.document.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">ID: {{ req.document.doc_id }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ doc.department }}</td>
-          <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
-            {{ doc.objective }}
-          </td>
-          <td style="font-weight: 500;">{{ doc.uploaded_by }}</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
-          <td style="text-align: right; white-space: nowrap;">
-            <button class="btn btn-sm btn-primary" data-action-approve>Approve</button>
-            <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td>{{ req.document.department.name }}</td>
+            <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+              {{ req.document.objective }}
+            </td>
+            <td style="font-weight: 500;">{{ req.submitted_by.full_name|default:req.submitted_by.email }}</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ req.submitted_at|date:"Y-m-d H:i" }}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-sm btn-primary" data-action-approve>Approve</button>
+              <button class="btn btn-sm btn-outline-danger" data-action-reject>Reject</button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-table-cell">
+              <div class="empty-state" style="padding: 28px 16px;">
+                <div class="empty-state-icon">✅</div>
+                <div class="empty-state-title">No pending approval requests.</div>
+                <div class="empty-state-text">New documents submitted by employees for review will appear in this queue.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
@@ -101,23 +113,38 @@
         </tr>
       </thead>
       <tbody>
-        {% for doc in recent_uploads %}
-        <tr data-searchable-row>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500;">{{ doc.title }}</a>
-            </div>
-          </td>
-          <td>{{ doc.folder }}</td>
-          <td>{{ doc.uploaded_by }}</td>
-          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
-          <td><span class="badge badge-published">{{ doc.status }}</span></td>
-          <td style="text-align: right;">
-            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">Inspect</a>
-          </td>
-        </tr>
-        {% endfor %}
+        {% if recent_uploads %}
+          {% for doc in recent_uploads %}
+          <tr data-searchable-row>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">ID: {{ doc.doc_id }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ doc.folder.name|default:'General' }}</td>
+            <td style="font-weight: 500;">{{ doc.created_by.full_name|default:doc.owner }}</td>
+            <td><span class="badge badge-neutral">V1</span></td>
+            <td><span class="badge badge-published">{{ doc.status }}</span></td>
+            <td style="text-align: right;">
+              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm">Inspect</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-table-cell">
+              <div class="empty-state" style="padding: 28px 16px;">
+                <div class="empty-state-icon">📁</div>
+                <div class="empty-state-title">No documents have been uploaded yet.</div>
+                <div class="empty-state-text">Documents within your assigned scope will be listed here.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

@@ -17,7 +17,7 @@
 
 <div class="card">
   <div class="card-header">
-    <h2 class="card-title">Audit Trail ({{ logs|length }} recent events)</h2>
+    <h2 class="card-title">Audit Trail ({{ logs|length }} events)</h2>
     <input type="text" id="logFilterInput" class="form-control" placeholder="Search user, action, target..." style="width: 250px; padding: 4px 10px; font-size: 12px;">
   </div>
 
@@ -36,18 +36,30 @@
         </tr>
       </thead>
       <tbody>
-        {% for log in logs %}
-        <tr data-log-row>
-          <td style="font-family: monospace; font-size: 11px; color: var(--text-secondary);">{{ log.id }}</td>
-          <td style="font-weight: 500;">{{ log.user }}</td>
-          <td><span class="badge badge-neutral">{{ log.role }}</span></td>
-          <td><strong>{{ log.action }}</strong></td>
-          <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; font-size: 12px;">{{ log.target }}</td>
-          <td style="color: var(--text-secondary); font-size: 11px;">{{ log.ip }}</td>
-          <td><span class="badge badge-published">{{ log.result }}</span></td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ log.timestamp }}</td>
-        </tr>
-        {% endfor %}
+        {% if logs %}
+          {% for log in logs %}
+          <tr data-log-row>
+            <td style="font-family: monospace; font-size: 11px; color: var(--text-secondary);">LOG-{{ log.id }}</td>
+            <td style="font-weight: 500;">{{ log.user.full_name|default:log.user_name_snapshot }}</td>
+            <td><span class="badge badge-neutral">{{ log.role_snapshot|default:'User' }}</span></td>
+            <td><strong>{{ log.action }}</strong></td>
+            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; font-size: 12px;">{{ log.target_resource }}</td>
+            <td style="color: var(--text-secondary); font-size: 11px;">{{ log.client_ip|default:'-' }}</td>
+            <td><span class="badge badge-published">{{ log.result }}</span></td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-title">No recent activity.</div>
+                <div class="empty-state-text">Actions performed across the system (logins, uploads, downloads, approvals) will be logged here automatically.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
@@ -59,7 +71,7 @@
   const logInput = document.getElementById('logFilterInput');
   if (logInput) {
     logInput.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase();
+      const q = e.target.value.toLowerCase().trim();
       document.querySelectorAll('[data-log-row]').forEach(r => {
         r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
       });

@@ -5,34 +5,34 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Employee Portal</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Welcome back, <strong>Bilal Nabil</strong> (IT & Infrastructure)</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Document Submissions & Permitted Library Access</p>
   </div>
 </div>
 
 <div class="stats-grid">
   <div class="stat-card">
     <span class="stat-label">Accessible Documents</span>
-    <span class="stat-value">215</span>
-    <span class="stat-meta">In IT department folders</span>
+    <span class="stat-value">{{ accessible_count }}</span>
+    <span class="stat-meta">In permitted folders</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">My Submissions</span>
-    <span class="stat-value">4</span>
-    <span class="stat-meta">Lifetime submissions</span>
+    <span class="stat-value">{{ my_submissions_count }}</span>
+    <span class="stat-meta">Total submitted documents</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">Pending Approval</span>
-    <span class="stat-value" style="color: var(--primary);">1</span>
-    <span class="stat-meta">Under review by Admin</span>
+    <span class="stat-value" style="color: var(--primary);">{{ pending_count }}</span>
+    <span class="stat-meta">Under review by management</span>
   </div>
   <div class="stat-card">
     <span class="stat-label">Published / Approved</span>
-    <span class="stat-value" style="color: var(--success);">2</span>
+    <span class="stat-value" style="color: var(--success);">{{ approved_count }}</span>
     <span class="stat-meta">Available to authorized peers</span>
   </div>
 </div>
 
-<!-- My Submissions Status (Specification Requirement 8.1 / 15.4) -->
+<!-- My Submissions Status -->
 <div class="card" style="margin-bottom: 24px;">
   <div class="card-header">
     <h2 class="card-title">My Recent Submissions Status</h2>
@@ -43,39 +43,49 @@
       <thead>
         <tr>
           <th>Submitted File</th>
-          <th>Folder</th>
+          <th>Department</th>
           <th>Submitted Date</th>
           <th>Status</th>
           <th>Reviewer Note / Status Detail</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge png">png</span>
-              <span style="font-weight: 500;">LAN_Server_Architecture_Diagram.png</span>
-            </div>
-          </td>
-          <td>System Architecture</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">2026-10-18 16:45</td>
-          <td><span class="badge badge-pending">Pending Review</span></td>
-          <td style="font-size: 12px; color: var(--text-secondary);">Awaiting Administrator sign-off</td>
-        </tr>
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge pdf">pdf</span>
-              <span style="font-weight: 500;">ERP_Migration_Plan_Proposal.pdf</span>
-            </div>
-          </td>
-          <td>System Architecture</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">2026-10-06 13:00</td>
-          <td><span class="badge badge-rejected">Rejected</span></td>
-          <td style="font-size: 12px; color: var(--danger);">
-            "Downtime window conflicts with fiscal month-end reconciliation. Reschedule to weekend maintenance."
-          </td>
-        </tr>
+        {% if my_submissions %}
+          {% for sub in my_submissions %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <span style="font-weight: 500;">{{ sub.document.title }}</span>
+              </div>
+            </td>
+            <td>{{ sub.document.department.name }}</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ sub.submitted_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if sub.status == 'APPROVED' %}
+                <span class="badge badge-published">Approved</span>
+              {% elif sub.status == 'REJECTED' %}
+                <span class="badge badge-rejected">Rejected</span>
+              {% else %}
+                <span class="badge badge-pending">Pending Review</span>
+              {% endif %}
+            </td>
+            <td style="font-size: 12px; color: var(--text-secondary);">
+              {{ sub.rejection_reason|default:'Awaiting review by authorized management.' }}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" class="empty-table-cell">
+              <div class="empty-state" style="padding: 24px 16px;">
+                <div class="empty-state-icon">📤</div>
+                <div class="empty-state-title">No submissions yet.</div>
+                <div class="empty-state-text">Click "Upload Document" to submit a new file for management review.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
@@ -84,7 +94,7 @@
 <!-- Accessible Documents in Permitted Folders -->
 <div class="card">
   <div class="card-header">
-    <h2 class="card-title">Authorized IT Documents & Policies</h2>
+    <h2 class="card-title">Authorized Documents & Policies</h2>
     <a href="{% url 'file_manager' %}" style="font-size: 12px; color: var(--primary); font-weight: 500;">Browse all</a>
   </div>
   <div class="table-responsive">
@@ -99,30 +109,39 @@
         </tr>
       </thead>
       <tbody>
-        {% for doc in accessible_docs %}
-        <tr data-searchable-row>
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <div>
-                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500;">{{ doc.title }}</a>
-                <div style="font-size: 11px; color: var(--text-secondary);">{{ doc.file_size }}</div>
+        {% if accessible_docs %}
+          {% for doc in accessible_docs %}
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500;">{{ doc.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">{{ doc.department.name }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
-            {{ doc.objective }}
-          </td>
-          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
-          <td style="text-align: right;">
-            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm">
-              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              View / Download
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">
+              {{ doc.objective }}
+            </td>
+            <td><span class="badge badge-neutral">V1</span></td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.document_date }}</td>
+            <td style="text-align: right;">
+              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm">Inspect</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" class="empty-table-cell">
+              <div class="empty-state" style="padding: 28px 16px;">
+                <div class="empty-state-icon">📄</div>
+                <div class="empty-state-title">No documents have been uploaded yet.</div>
+                <div class="empty-state-text">Published documents accessible to your department will appear here.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>

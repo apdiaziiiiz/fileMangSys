@@ -8,7 +8,7 @@
     <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Central Document Repository &bull; Browse by department folders or inspect all organizational records.</p>
   </div>
   <div class="page-actions">
-    <!-- Department Switcher Dropdown (Super Admin / Admin capability) -->
+    <!-- Department Switcher Dropdown -->
     <div style="display: flex; align-items: center; gap: 8px;">
       <label for="deptSelectDropdown" style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Department:</label>
       <select id="deptSelectDropdown" class="form-control" style="width: 210px; padding: 6px 10px; font-weight: 500;" onchange="changeDepartment(this.value)">
@@ -26,7 +26,7 @@
   </div>
 </div>
 
-<!-- Department Folders Selector (Changes dynamically based on selected Department) -->
+<!-- Department Folders Selector -->
 <div class="folder-grid" id="folderCardsGrid">
   <div class="folder-card active" data-folder-name="all">
     <span class="folder-icon">🗂️</span>
@@ -72,7 +72,7 @@
           <th data-sort>Filename</th>
           <th>Folder</th>
           <th>Department</th>
-          <th data-sort>Size</th>
+          <th data-sort>Owner</th>
           <th>Version</th>
           <th data-sort>Upload Date</th>
           <th>Status</th>
@@ -80,38 +80,50 @@
         </tr>
       </thead>
       <tbody>
-        {% for doc in documents %}
-        <tr data-searchable-row data-folder="{{ doc.folder }}" data-department="{{ doc.department }}" data-type="{{ doc.file_type }}" data-status="{{ doc.status }}">
-          <td>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="file-badge {{ doc.file_type }}">{{ doc.file_type }}</span>
-              <div>
-                <a href="{% url 'document_detail' doc.id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
-                <div style="font-size: 11px; color: var(--text-secondary);">Doc ID: {{ doc.id }}</div>
+        {% if documents %}
+          {% for doc in documents %}
+          <tr data-searchable-row data-folder="{{ doc.folder.name }}" data-department="{{ doc.department.name }}" data-status="{{ doc.status }}">
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="file-badge">file</span>
+                <div>
+                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
+                  <div style="font-size: 11px; color: var(--text-secondary);">Doc ID: {{ doc.doc_id }}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>{{ doc.folder }}</td>
-          <td>{{ doc.department }}</td>
-          <td>{{ doc.file_size }}</td>
-          <td><span class="badge badge-neutral">{{ doc.current_version }}</span></td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.uploaded_date }}</td>
-          <td>
-            {% if doc.status == 'Published' %}
-              <span class="badge badge-published">Published</span>
-            {% elif doc.status == 'Pending' %}
-              <span class="badge badge-pending">Pending</span>
-            {% else %}
-              <span class="badge badge-rejected">Rejected</span>
-            {% endif %}
-          </td>
-          <td style="text-align: right; white-space: nowrap;">
-            <a href="{% url 'document_detail' doc.id %}" class="btn btn-secondary btn-sm" title="View details">Inspect</a>
-            <a href="{% url 'version_history' doc.id %}" class="btn btn-secondary btn-sm" title="Version History">Versions</a>
-            <a href="{% url 'share_interface' doc.id %}" class="btn btn-secondary btn-sm" title="Internal Sharing">Share</a>
-          </td>
-        </tr>
-        {% endfor %}
+            </td>
+            <td>📁 {{ doc.folder.name|default:'General' }}</td>
+            <td>{{ doc.department.name }}</td>
+            <td>{{ doc.owner }}</td>
+            <td><span class="badge badge-neutral">V1</span></td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if doc.status == 'PUBLISHED' %}
+                <span class="badge badge-published">Published</span>
+              {% elif doc.status == 'PENDING' %}
+                <span class="badge badge-pending">Pending</span>
+              {% else %}
+                <span class="badge badge-rejected">{{ doc.status }}</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm" title="View details">Inspect</a>
+              <a href="{% url 'version_history' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Version History">Versions</a>
+              <a href="{% url 'share_interface' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Internal Sharing">Share</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">📁</div>
+                <div class="empty-state-title">No documents have been uploaded yet.</div>
+                <div class="empty-state-text">Use the "Upload Document" button above to upload files into the central repository.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
