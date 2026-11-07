@@ -1,6 +1,6 @@
 """
 UI Prototype Views for the Department-Based Document Management System.
-Renders all 20 required interfaces with clean mock data without any database/backend logic.
+Renders clean, role-tailored mock interfaces without backend/database overhead.
 """
 
 from django.shortcuts import render, redirect
@@ -90,30 +90,43 @@ def dashboard_switcher(request, role):
 
 # 6. Department Navigation
 def department_list(request):
-    ctx = _get_base_context(active_page='departments')
+    ctx = _get_base_context(active_page='departments', active_role='super_admin')
     return render(request, 'prototype/documents/department_list.html', ctx)
 
-# 7. File Manager and Folder Navigation
+# 7. File Manager & Documents (Merged with All Documents as requested)
 def file_manager(request):
-    dept = request.GET.get('dept', 'Finance')
-    ctx = _get_base_context(active_page='file_manager')
+    dept_query = request.GET.get('dept', 'all')
+    folder_query = request.GET.get('folder', '')
+    
+    # Filter documents based on department if specified
+    if dept_query and dept_query != 'all':
+        docs = [d for d in MOCK_DOCUMENTS if d['department'].lower() == dept_query.lower()]
+        dept_obj = next((dep for dep in MOCK_DEPARTMENTS if dep['name'].lower() == dept_query.lower()), None)
+        folders = dept_obj['folders'] if dept_obj else []
+    else:
+        docs = MOCK_DOCUMENTS
+        # Gather all unique folders across all departments
+        all_f = []
+        for d in MOCK_DEPARTMENTS:
+            all_f.extend(d.get('folders', []))
+        folders = list(dict.fromkeys(all_f))
+
+    ctx = _get_base_context(active_page='file_manager', active_role='super_admin')
     ctx.update({
-        'active_dept': dept,
-        'documents': MOCK_DOCUMENTS,
+        'active_dept': dept_query,
+        'current_folders': folders,
+        'documents': docs,
+        'selected_folder': folder_query,
     })
     return render(request, 'prototype/documents/file_manager.html', ctx)
 
-# 8. Document Listing
+# Redirect old /documents/ route to unified /files/
 def document_list(request):
-    ctx = _get_base_context(active_page='document_list')
-    ctx.update({
-        'documents': MOCK_DOCUMENTS,
-    })
-    return render(request, 'prototype/documents/document_list.html', ctx)
+    return redirect('file_manager')
 
 # 8. Document Details
 def document_detail(request, doc_id):
-    ctx = _get_base_context(active_page='document_list')
+    ctx = _get_base_context(active_page='file_manager', active_role='super_admin')
     doc = next((d for d in MOCK_DOCUMENTS if d['id'] == doc_id), None)
     if not doc:
         raise Http404("Document not found in prototype mock records.")
@@ -122,7 +135,7 @@ def document_detail(request, doc_id):
 
 # 9. Quick & Advanced Search
 def search_page(request):
-    ctx = _get_base_context(active_page='search_page')
+    ctx = _get_base_context(active_page='search_page', active_role='super_admin')
     ctx.update({
         'documents': MOCK_DOCUMENTS,
     })
@@ -130,7 +143,7 @@ def search_page(request):
 
 # 11. Approval and Rejection Interface
 def approvals_list(request):
-    ctx = _get_base_context(active_page='approvals_list')
+    ctx = _get_base_context(active_page='approvals_list', active_role='super_admin')
     pending_docs = [d for d in MOCK_DOCUMENTS if d['status'] == 'Pending']
     ctx.update({
         'pending_documents': pending_docs,
@@ -139,7 +152,7 @@ def approvals_list(request):
 
 # 12. Document Version History
 def version_history(request, doc_id):
-    ctx = _get_base_context(active_page='document_list')
+    ctx = _get_base_context(active_page='file_manager', active_role='super_admin')
     doc = next((d for d in MOCK_DOCUMENTS if d['id'] == doc_id), None)
     if not doc:
         raise Http404("Document not found.")
@@ -148,7 +161,7 @@ def version_history(request, doc_id):
 
 # 13. Recycle Bin
 def recycle_bin(request):
-    ctx = _get_base_context(active_page='recycle_bin')
+    ctx = _get_base_context(active_page='recycle_bin', active_role='super_admin')
     ctx.update({
         'deleted_items': MOCK_RECYCLE_BIN,
     })
@@ -156,7 +169,7 @@ def recycle_bin(request):
 
 # 14. Internal Sharing Interface
 def share_interface(request, doc_id):
-    ctx = _get_base_context(active_page='document_list')
+    ctx = _get_base_context(active_page='file_manager', active_role='super_admin')
     doc = next((d for d in MOCK_DOCUMENTS if d['id'] == doc_id), None)
     if not doc:
         raise Http404("Document not found.")
@@ -165,7 +178,7 @@ def share_interface(request, doc_id):
 
 # 15. User Management
 def user_management(request):
-    ctx = _get_base_context(active_page='users')
+    ctx = _get_base_context(active_page='users', active_role='super_admin')
     ctx.update({
         'users': MOCK_USERS,
     })
@@ -173,12 +186,12 @@ def user_management(request):
 
 # 16. Department Management
 def department_management(request):
-    ctx = _get_base_context(active_page='departments')
+    ctx = _get_base_context(active_page='departments', active_role='super_admin')
     return render(request, 'prototype/admin/department_management.html', ctx)
 
 # 17. Permission Management
 def permission_management(request):
-    ctx = _get_base_context(active_page='permissions')
+    ctx = _get_base_context(active_page='permissions', active_role='super_admin')
     ctx.update({
         'roles_permissions': MOCK_ROLES_PERMISSIONS,
     })
@@ -186,7 +199,7 @@ def permission_management(request):
 
 # 18. Activity Logs
 def activity_logs(request):
-    ctx = _get_base_context(active_page='activity_logs')
+    ctx = _get_base_context(active_page='activity_logs', active_role='super_admin')
     ctx.update({
         'logs': MOCK_ACTIVITY_LOGS,
     })
@@ -194,7 +207,7 @@ def activity_logs(request):
 
 # 19. Storage Monitoring
 def storage_monitoring(request):
-    ctx = _get_base_context(active_page='storage')
+    ctx = _get_base_context(active_page='storage', active_role='super_admin')
     ctx.update({
         'storage_stats': MOCK_STORAGE_STATS,
     })
@@ -202,5 +215,5 @@ def storage_monitoring(request):
 
 # 20. System Settings
 def system_settings(request):
-    ctx = _get_base_context(active_page='settings')
+    ctx = _get_base_context(active_page='settings', active_role='super_admin')
     return render(request, 'prototype/admin/system_settings.html', ctx)

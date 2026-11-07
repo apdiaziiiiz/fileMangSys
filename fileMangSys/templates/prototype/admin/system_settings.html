@@ -8,59 +8,84 @@
     <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Global environment preferences, retention windows, and upload parameters.</p>
   </div>
   <div class="page-actions">
-    <button class="btn btn-primary" onclick="showToast('Settings saved successfully.');">Save Preferences</button>
+    <button type="button" class="btn btn-secondary" onclick="resetSettingsForm()">Reset</button>
+    <button type="button" class="btn btn-primary" onclick="saveSettingsForm()">Save Changes</button>
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-  <!-- File & Upload Settings -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">File Policy & Upload Constraints</h2>
+<form id="systemSettingsForm">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <!-- File & Upload Settings -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">File Policy & Upload Constraints</h2>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Allowed File Extensions</label>
+        <input type="text" id="settingAllowedExt" class="form-control" data-default="pdf, docx, xlsx, jpg, jpeg, png" value="pdf, docx, xlsx, jpg, jpeg, png">
+        <span style="font-size: 11px; color: var(--text-secondary);">Validated strictly against MIME signatures on upload.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Maximum Upload Size per Document (MB)</label>
+        <input type="number" id="settingMaxSize" class="form-control" data-default="50" value="50">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Recycle Bin Retention Window (Days)</label>
+        <input type="number" id="settingRetentionDays" class="form-control" data-default="30" value="30">
+        <span style="font-size: 11px; color: var(--text-secondary);">Files deleted beyond this limit are automatically pruned.</span>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Allowed File Extensions</label>
-      <input type="text" class="form-control" value="pdf, docx, xlsx, jpg, jpeg, png">
-      <span style="font-size: 11px; color: var(--text-secondary);">Validated strictly against MIME signatures on upload.</span>
-    </div>
+    <!-- Network & Security Settings -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Network & Server Configuration</h2>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Maximum Upload Size per Document (MB)</label>
-      <input type="number" class="form-control" value="50">
-    </div>
+      <div class="form-group">
+        <label class="form-label">LAN Server IP Address</label>
+        <input type="text" id="settingServerIp" class="form-control" data-default="192.168.123.35" value="192.168.123.35">
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Recycle Bin Retention Window (Days)</label>
-      <input type="number" class="form-control" value="30">
-      <span style="font-size: 11px; color: var(--text-secondary);">Files deleted beyond this limit are automatically pruned.</span>
+      <div class="form-group">
+        <label class="form-label">Session Idle Timeout (Minutes)</label>
+        <input type="number" id="settingTimeout" class="form-control" data-default="60" value="60">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Simultaneous Conflict Detection</label>
+        <select id="settingConflictMode" class="form-control" data-default="enabled">
+          <option value="enabled" selected>Strict Version Checking (Warn & Prevent Overwrite)</option>
+          <option value="disabled">Permissive</option>
+        </select>
+        <span style="font-size: 11px; color: var(--text-secondary);">Protects multiple computers editing the same file concurrently.</span>
+      </div>
     </div>
   </div>
 
-  <!-- Network & Security Settings -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">Network & Server Configuration</h2>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">LAN Server IP Address</label>
-      <input type="text" class="form-control" value="192.168.123.35">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Session Idle Timeout (Minutes)</label>
-      <input type="number" class="form-control" value="60">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Simultaneous Conflict Detection</label>
-      <select class="form-control">
-        <option value="enabled" selected>Strict Version Checking (Warn & Prevent Overwrite)</option>
-        <option value="disabled">Permissive</option>
-      </select>
-      <span style="font-size: 11px; color: var(--text-secondary);">Protects multiple computers editing the same file concurrently.</span>
-    </div>
+  <!-- Bottom Action Buttons for convenience -->
+  <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+    <button type="button" class="btn btn-secondary" onclick="resetSettingsForm()">Reset</button>
+    <button type="button" class="btn btn-primary" onclick="saveSettingsForm()">Save Changes</button>
   </div>
-</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function saveSettingsForm() {
+    showToast('System configuration saved successfully.');
+  }
+
+  function resetSettingsForm() {
+    const inputs = document.querySelectorAll('#systemSettingsForm [data-default]');
+    inputs.forEach(input => {
+      input.value = input.getAttribute('data-default');
+    });
+    showToast('Form reset to default values.');
+  }
+</script>
 {% endblock %}
