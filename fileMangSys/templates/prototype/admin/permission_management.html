@@ -1,72 +1,118 @@
 {% extends 'prototype/base.html' %}
-{% block title %}Permission Matrix - Enterprise DMS{% endblock %}
+{% block title %}Role & Permission Control (RBAC) - Enterprise DMS{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
     <h1 class="page-title">Role & Permission Control (RBAC)</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Comprehensive RBAC matrix combined with individual grants, scope limitations, and folder policies.</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Comprehensive RBAC matrix combined with individual grants, scope limitations, and user overrides.</p>
   </div>
   <div class="page-actions">
-    <button class="btn btn-primary" onclick="showToast('Permission policies synchronized.');">Save Permission Matrix</button>
+    <button class="btn btn-primary" onclick="openOverrideModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Configure User Permissions
+    </button>
   </div>
 </div>
 
 <div class="card" style="margin-bottom: 24px;">
-  <div class="card-header">
-    <h2 class="card-title">Default Role Capabilities</h2>
-    <span style="font-size: 12px; color: var(--text-secondary);">Super Admin privileges are strictly locked by system design</span>
-  </div>
+  <form method="POST" action="{% url 'permission_management' %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="roleMatrixAction" value="save_role_permissions">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h2 class="card-title">Default Role Capabilities</h2>
+        <span style="font-size: 12px; color: var(--text-secondary);">Super Admin privileges are strictly locked; other roles can be customized below</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm"
+          onclick="confirmDelete('Reset role permissions to system default baseline?', () => {
+            document.getElementById('roleMatrixAction').value = 'reset_role_permissions';
+            document.querySelector('#roleMatrixAction').form.submit();
+          })">
+          Reset to Default
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Save Capabilities
+        </button>
+      </div>
+    </div>
 
-  <div class="table-responsive">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>System Role</th>
-          <th>Active Users</th>
-          <th>Scope Boundary</th>
-          <th style="text-align: center;">Direct Upload</th>
-          <th style="text-align: center;">Approve / Reject</th>
-          <th style="text-align: center;">Delete Files</th>
-          <th style="text-align: center;">User Mgmt</th>
-          <th style="text-align: center;">Audit Logs</th>
-          <th style="text-align: center;">Recycle Bin</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in roles_permissions %}
-        <tr>
-          <td>
-            <strong style="font-size: 13px;">{{ r.role }}</strong>
-          </td>
-          <td>{{ r.user_count }} users</td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ r.scope }}</td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_upload %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_approve %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_delete %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_manage_users %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_view_audit %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-          <td style="text-align: center;">
-            <input type="checkbox" {% if r.can_restore_bin %}checked{% endif %} {% if r.role == 'Super Administrator' %}disabled{% endif %}>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>System Role</th>
+            <th>Active Users</th>
+            <th>Scope Boundary</th>
+            <th style="text-align: center;">Direct Upload</th>
+            <th style="text-align: center;">Approve / Reject</th>
+            <th style="text-align: center;">Delete Files</th>
+            <th style="text-align: center;">User Mgmt</th>
+            <th style="text-align: center;">Audit Logs</th>
+            <th style="text-align: center;">Recycle Bin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in roles_permissions %}
+          <tr>
+            <td>
+              <strong style="font-size: 13px;">{{ r.role }}</strong>
+              {% if r.is_super %}<span style="font-size: 10px; color: var(--text-secondary); margin-left: 4px;">(Locked)</span>{% endif %}
+            </td>
+            <td>{{ r.user_count }} users</td>
+            <td style="color: var(--text-secondary); font-size: 12px;">{{ r.scope }}</td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_doc_upload" {% if r.can_upload %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_doc_approve" {% if r.can_approve %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_doc_delete" {% if r.can_delete %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_user_manage" {% if r.can_manage_users %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_audit_view" {% if r.can_view_audit %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if r.is_super %}
+                <input type="checkbox" checked disabled>
+              {% else %}
+                <input type="checkbox" name="perm_{{ r.code }}_bin_manage" {% if r.can_restore_bin %}checked{% endif %}>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
 </div>
 
-<!-- Individual User Permission Overrides (Specification Section 4) -->
+<!-- Individual User Permission Overrides -->
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">Individual User Permission Overrides</h2>
@@ -86,32 +132,209 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td style="font-weight: 500;">Ahmed Al-Mansoor</td>
-          <td>Super Admin</td>
-          <td>Global</td>
-          <td><span class="badge badge-published">ALL_CAPABILITIES</span></td>
-          <td style="color: var(--text-secondary);">&mdash;</td>
-          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" disabled>Locked</button></td>
-        </tr>
-        <tr>
-          <td style="font-weight: 500;">Mohamed (Employee)</td>
-          <td>Employee</td>
-          <td>Human Resources</td>
-          <td><span class="badge badge-published">READ_HR_DOCS</span></td>
-          <td><span class="badge badge-rejected">DENY_DOWNLOAD</span></td>
-          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit rule modal.')">Edit Rule</button></td>
-        </tr>
-        <tr>
-          <td style="font-weight: 500;">Ahmed (Employee)</td>
-          <td>Employee</td>
-          <td>Finance</td>
-          <td><span class="badge badge-published">UPLOAD_FINANCE</span></td>
-          <td><span class="badge badge-rejected">DENY_DELETE</span></td>
-          <td style="text-align: right;"><button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit rule modal.')">Edit Rule</button></td>
-        </tr>
+        {% if users_with_overrides %}
+          {% for item in users_with_overrides %}
+          <tr>
+            <td>
+              <div style="font-weight: 500;">{{ item.user.full_name }}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">{{ item.user.email }}</div>
+            </td>
+            <td>
+              <span class="badge badge-neutral">
+                {{ item.user.role.name|default:'Employee' }}
+              </span>
+            </td>
+            <td>{{ item.user.primary_department.name|default:'System-Wide / Global' }}</td>
+            <td>
+              {% if item.is_super %}
+                <span class="badge badge-published">ALL_CAPABILITIES</span>
+              {% elif item.grants %}
+                {% for g in item.grants %}
+                  <div style="display:inline-flex;align-items:center;gap:4px;margin-bottom:3px;">
+                    <span class="badge badge-published">{{ g.permission.name }}</span>
+                    <button type="button" style="border:none;background:transparent;cursor:pointer;color:#991B1B;font-size:12px;"
+                      onclick="confirmDelete('Remove grant {{ g.permission.name }} for {{ item.user.full_name }}?', () => {
+                        const form = document.getElementById('deleteOverrideForm');
+                        form.override_id.value = '{{ g.id }}';
+                        form.submit();
+                      })">&times;</button>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <span style="color: var(--text-secondary);">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.is_super %}
+                <span style="color: var(--text-secondary);">&mdash;</span>
+              {% elif item.denials %}
+                {% for d in item.denials %}
+                  <div style="display:inline-flex;align-items:center;gap:4px;margin-bottom:3px;">
+                    <span class="badge badge-rejected">{{ d.permission.name }}</span>
+                    <button type="button" style="border:none;background:transparent;cursor:pointer;color:#991B1B;font-size:12px;"
+                      onclick="confirmDelete('Remove denial {{ d.permission.name }} for {{ item.user.full_name }}?', () => {
+                        const form = document.getElementById('deleteOverrideForm');
+                        form.override_id.value = '{{ d.id }}';
+                        form.submit();
+                      })">&times;</button>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <span style="color: var(--text-secondary);">&mdash;</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              {% if item.is_super %}
+                <button class="btn btn-secondary btn-sm" disabled style="opacity:0.6;">Locked</button>
+              {% else %}
+                <button class="btn btn-secondary btn-sm"
+                  onclick="openOverrideModalForUser('{{ item.user.id }}', '{{ item.user.full_name|escapejs }}', [
+                    {% for o in item.overrides %}{ code: '{{ o.permission.code }}', type: '{{ o.override_type }}' },{% endfor %}
+                  ])">
+                  Edit Rule
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty-table-cell">
+              <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-title">No users registered in system.</div>
+                <div class="empty-state-text">Add users to configure explicit grants or denials.</div>
+              </div>
+            </td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Modal: Checkbox-based User Permissions Configuration -->
+<div class="modal-overlay" id="overrideModal">
+  <div class="modal-card" style="max-width: 620px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Configure User Permissions</h3>
+      <button class="modal-close-btn" onclick="closeModal('overrideModal')">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'permission_management' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_override">
+      <div class="modal-body" style="padding: 18px 22px;">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label required">Select User</label>
+          <select name="user_id" id="overrideUserId" class="form-control" required onchange="handleUserSelectionChange(this.value)">
+            <option value="">-- Choose User --</option>
+            {% for u in all_users %}
+              {% if not u.is_superuser and u.role.code != 'SUPER_ADMIN' %}
+                <option value="{{ u.id }}">{{ u.full_name }} ({{ u.email }})</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">
+          Check / Uncheck Specific Capabilities for this User:
+        </div>
+
+        <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 14px;">
+          <table class="table" style="margin: 0; font-size: 12px;">
+            <thead>
+              <tr style="background: var(--bg-subtle);">
+                <th style="padding: 8px 12px;">Capability</th>
+                <th style="text-align: center; width: 100px; padding: 8px 10px;">Grant (Allow)</th>
+                <th style="text-align: center; width: 100px; padding: 8px 10px;">Deny (Block)</th>
+                <th style="text-align: center; width: 80px; padding: 8px 10px;">Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in all_permissions %}
+              <tr>
+                <td style="padding: 8px 12px;">
+                  <strong style="color: var(--text-primary);">{{ p.name }}</strong>
+                  <div style="font-size: 10px; color: var(--text-secondary); font-family: monospace;">{{ p.code }}</div>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">
+                  <label style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                    <input type="radio" name="perm_state_{{ p.code|cut:':' }}" id="grant_{{ p.code|cut:':' }}" value="GRANT" style="accent-color: #0066FF;">
+                  </label>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">
+                  <label style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                    <input type="radio" name="perm_state_{{ p.code|cut:':' }}" id="deny_{{ p.code|cut:':' }}" value="DENY" style="accent-color: #DC2626;">
+                  </label>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">
+                  <label style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                    <input type="radio" name="perm_state_{{ p.code|cut:':' }}" id="default_{{ p.code|cut:':' }}" value="DEFAULT" checked style="accent-color: #6B7280;">
+                  </label>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Reason / Justification (Optional)</label>
+          <input type="text" name="reason" class="form-control" placeholder="e.g. Special permission granted for Q4 Audit">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('overrideModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="background: #EA580C; border-color: #EA580C;">Save Permissions</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Hidden delete override form -->
+<form method="POST" action="{% url 'permission_management' %}" id="deleteOverrideForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_override">
+  <input type="hidden" name="override_id" value="">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function resetAllRadioDefaults() {
+    {% for p in all_permissions %}
+      const defRadio = document.getElementById('default_{{ p.code|cut:":" }}');
+      if (defRadio) defRadio.checked = true;
+    {% endfor %}
+  }
+
+  function openOverrideModal() {
+    document.getElementById('overrideUserId').value = '';
+    resetAllRadioDefaults();
+    document.getElementById('overrideModal').style.display = 'flex';
+  }
+
+  function openOverrideModalForUser(userId, userName, overrides) {
+    document.getElementById('overrideUserId').value = userId;
+    resetAllRadioDefaults();
+    if (Array.isArray(overrides)) {
+      overrides.forEach(o => {
+        const cleanCode = o.code.replace(':', '');
+        if (o.type === 'GRANT') {
+          const radio = document.getElementById('grant_' + cleanCode);
+          if (radio) radio.checked = true;
+        } else if (o.type === 'DENY') {
+          const radio = document.getElementById('deny_' + cleanCode);
+          if (radio) radio.checked = true;
+        }
+      });
+    }
+    document.getElementById('overrideModal').style.display = 'flex';
+  }
+
+  function handleUserSelectionChange(userId) {
+    resetAllRadioDefaults();
+  }
+</script>
 {% endblock %}

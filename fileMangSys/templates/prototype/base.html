@@ -60,7 +60,7 @@
         <a href="{% url 'approvals_list' %}" class="nav-item {% if active_page == 'approvals_list' %}active{% endif %}">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span>Approvals</span>
-          <span class="nav-badge">{{ pending_approvals_count }}</span>
+          {% if pending_approvals_count %}<span class="nav-badge">{{ pending_approvals_count }}</span>{% endif %}
         </a>
         {% endif %}
         <a href="{% url 'search_page' %}" class="nav-item {% if active_page == 'search_page' %}active{% endif %}">
@@ -75,12 +75,12 @@
         {% endif %}
       </nav>
 
-      <!-- Administration Section - Only visible to authorized management roles -->
+      <!-- Administration Section -->
       {% if active_role == 'super_admin' or active_role == 'admin' %}
       <nav class="nav-section">
         <div class="nav-section-label">Administration</div>
         {% if active_role == 'super_admin' %}
-        <a href="{% url 'department_list' %}" class="nav-item {% if active_page == 'departments' %}active{% endif %}">
+        <a href="{% url 'department_management' %}" class="nav-item {% if active_page == 'departments' %}active{% endif %}">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           <span>Departments</span>
         </a>
@@ -119,7 +119,7 @@
             <div class="user-quick-name">{{ current_user.name }}</div>
             <div class="user-quick-role">{{ current_user.role }}</div>
           </div>
-          <a href="{% url 'login_page' %}" title="Logout" style="color: var(--text-secondary); margin-left: auto;">
+          <a href="{% url 'logout_user' %}" title="Logout" style="color: var(--text-secondary); margin-left: auto;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </a>
         </div>
@@ -130,27 +130,35 @@
     <main class="app-main">
       <header class="app-header">
         <div class="header-left">
-          <div class="header-search-bar">
-            <svg width="15" height="15" fill="none" stroke="#858585" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="globalSearchInput" class="header-search-input" placeholder="Quick search filename or objective...">
-          </div>
+          <form method="GET" action="{% url 'search_page' %}" style="display:flex;align-items:center;">
+            <div class="header-search-bar">
+              <svg width="15" height="15" fill="none" stroke="#858585" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" name="q" class="header-search-input" placeholder="Quick search filename or objective..." value="{{ request.GET.q }}">
+            </div>
+          </form>
         </div>
 
         <div class="header-right">
-          <!-- Role selector kept clean for easy testing and evaluation -->
-          <div class="role-switcher-container">
-            <button class="role-switch-btn {% if active_role == 'super_admin' %}active{% endif %}" data-role="super-admin">Super Admin</button>
-            <button class="role-switch-btn {% if active_role == 'admin' %}active{% endif %}" data-role="admin">Admin</button>
-            <button class="role-switch-btn {% if active_role == 'manager' %}active{% endif %}" data-role="manager">Manager</button>
-            <button class="role-switch-btn {% if active_role == 'employee' %}active{% endif %}" data-role="employee">Employee</button>
-          </div>
-
           <button class="btn btn-primary btn-sm" data-modal-target="uploadModal">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Upload Document
           </button>
         </div>
       </header>
+
+      <!-- Flash Messages -->
+      {% if messages %}
+      <div style="padding: 0 24px; margin-top: 12px;">
+        {% for msg in messages %}
+        <div style="padding: 10px 16px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 500;
+          {% if msg.tags == 'error' %}background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;
+          {% elif msg.tags == 'success' %}background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;
+          {% else %}background:#DBEAFE;color:#1E40AF;border:1px solid #BFDBFE;{% endif %}">
+          {{ msg }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
 
       <!-- Page Content -->
       <section class="page-container">
@@ -159,56 +167,55 @@
     </main>
   </div>
 
-  <!-- Reusable Upload Modal (Required Interface 10) -->
+  <!-- Upload Modal -->
   <div class="modal-overlay" id="uploadModal">
     <div class="modal-card">
       <div class="modal-header">
         <h3 class="modal-title">Upload New Document</h3>
         <button class="modal-close-btn" data-modal-close>&times;</button>
       </div>
-      <form id="prototypeUploadForm">
-        <div class="modal-body">
-          <div class="file-dropzone" id="uploadDropzone">
+      <form method="POST" action="{% url 'file_manager' %}" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="upload">
+        <div class="modal-body" style="padding: 16px 20px;">
+          <div class="file-dropzone" id="uploadDropzone" onclick="document.getElementById('fileInputHidden').click()">
             <div class="dropzone-icon">📁</div>
             <p style="font-weight: 500; margin-bottom: 2px;">Click to select file or drag & drop</p>
-            <p style="font-size: 11px; color: var(--text-secondary);">Allowed formats: PDF, DOCX, XLSX, JPG, PNG (Max 50MB)</p>
-            <input type="file" id="fileInputHidden" style="display: none;" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png">
-            <div id="selectedFileNamePreview" style="display: none; margin-top: 10px; font-weight: 600; color: var(--primary);"></div>
+            <p style="font-size: 11px; color: var(--text-secondary);">Allowed: PDF, DOCX, XLSX, JPG, PNG (Max 50MB)</p>
+            <input type="file" id="fileInputHidden" name="document_file" style="display: none;" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" required>
+            <div id="selectedFileNamePreview" style="display:none; margin-top:8px; font-weight:600; color:var(--primary);"></div>
           </div>
 
-          <div class="form-group" style="margin-top: 16px;">
+          <div class="form-group" style="margin-top: 12px; margin-bottom: 10px;">
             <label class="form-label required">Objective / Purpose</label>
-            <textarea class="form-control" rows="2" placeholder="Why does this document exist and what is it intended to achieve?" required></textarea>
+            <textarea name="objective" class="form-control" rows="2" placeholder="Why does this document exist?" required></textarea>
           </div>
 
-          <div class="form-grid-2">
-            <div class="form-group">
+          <div class="form-grid-2" style="margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label required">Department</label>
-              <select class="form-control" required>
-                {% if departments %}
-                  {% for dept in departments %}
-                    <option value="{{ dept.name }}">{{ dept.name }}</option>
-                  {% endfor %}
-                {% else %}
-                  <option value="">No departments available</option>
-                {% endif %}
+              <select name="department_id" class="form-control" required id="uploadDeptSelect" onchange="loadFolders(this.value)">
+                <option value="">-- Select Department --</option>
+                {% for dept in departments %}
+                  <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label required">Document Date</label>
-              <input type="date" class="form-control" value="2026-11-07" required>
+              <input type="date" name="document_date" class="form-control" value="{% now 'Y-m-d' %}" required>
             </div>
           </div>
 
           <div class="form-grid-2">
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label required">Owner (Person / Team)</label>
-              <input type="text" class="form-control" placeholder="e.g. Finance, Team lead, Author" required>
+              <input type="text" name="owner" class="form-control" placeholder="e.g. Finance Team" required>
             </div>
-            <div class="form-group">
-              <label class="form-label required">Target Folder</label>
-              <select class="form-control" required>
-                <option value="General">General / Root</option>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Target Folder</label>
+              <select name="folder_id" class="form-control" id="uploadFolderSelect">
+                <option value="">General / Root (Default)</option>
               </select>
             </div>
           </div>
@@ -221,9 +228,112 @@
     </div>
   </div>
 
+  <!-- Reusable Confirmation Dialog Modal (Replaces browser alert/confirm) -->
+  <div class="modal-overlay" id="confirmDialogModal" style="z-index: 10000;">
+    <div class="modal-card" style="max-width: 420px; text-align: center; padding: 24px;">
+      <div style="font-size: 36px; margin-bottom: 12px;">⚠️</div>
+      <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;" id="confirmDialogTitle">Please Confirm</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;" id="confirmDialogMessage">Are you sure you want to proceed?</p>
+      <div style="display: flex; justify-content: center; gap: 10px;">
+        <button type="button" class="btn btn-secondary" id="confirmDialogCancelBtn" style="min-width: 90px;">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmDialogConfirmBtn" style="min-width: 90px; background: #DC2626;">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <script src="{% static 'js/app.js' %}"></script>
+  <script>
+    // Universal Small Pop-up Confirmation Modal
+    let pendingConfirmAction = null;
+
+    function confirmDelete(message, onConfirm) {
+      document.getElementById('confirmDialogMessage').innerText = message;
+      pendingConfirmAction = onConfirm;
+      document.getElementById('confirmDialogModal').style.display = 'flex';
+    }
+
+    document.getElementById('confirmDialogCancelBtn').addEventListener('click', () => {
+      document.getElementById('confirmDialogModal').style.display = 'none';
+      pendingConfirmAction = null;
+    });
+
+    document.getElementById('confirmDialogConfirmBtn').addEventListener('click', () => {
+      document.getElementById('confirmDialogModal').style.display = 'none';
+      if (typeof pendingConfirmAction === 'function') {
+        pendingConfirmAction();
+      }
+      pendingConfirmAction = null;
+    });
+
+    // Reusable modal functions
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Close on backdrop click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.style.display = 'none';
+      });
+    });
+
+    // File input preview
+    const fileInp = document.getElementById('fileInputHidden');
+    if (fileInp) {
+      fileInp.addEventListener('change', function() {
+        const preview = document.getElementById('selectedFileNamePreview');
+        if (this.files.length) {
+          preview.textContent = '📎 ' + this.files[0].name;
+          preview.style.display = 'block';
+        }
+      });
+    }
+
+    // Dynamically refresh and load folders inside selected department via API
+    function loadFolders(deptId) {
+      const sel = document.getElementById('uploadFolderSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Loading folders...</option>';
+      if (!deptId) {
+        sel.innerHTML = '<option value="">General / Root (Default)</option>';
+        return;
+      }
+      fetch(`/api/departments/${deptId}/folders/`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        sel.innerHTML = '';
+        if (!data.folders || data.folders.length === 0) {
+          sel.innerHTML = '<option value="">General / Root (Default)</option>';
+          return;
+        }
+        let hasGeneral = false;
+        data.folders.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.textContent = `📁 ${f.name}`;
+          if (f.name.toLowerCase() === 'general') {
+            opt.selected = true;
+            hasGeneral = true;
+          }
+          sel.appendChild(opt);
+        });
+        if (!hasGeneral) {
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.textContent = 'General / Root (Default)';
+          defaultOpt.selected = true;
+          sel.insertBefore(defaultOpt, sel.firstChild);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading department folders:', err);
+        sel.innerHTML = '<option value="">General / Root (Default)</option>';
+      });
+    }
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

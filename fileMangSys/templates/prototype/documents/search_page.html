@@ -5,7 +5,7 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Quick & Advanced Search</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Live multi-attribute query across filename, objectives, departments, owners, and dates.</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Live multi-attribute query across database: filename, objectives, departments, owners, and dates.</p>
   </div>
 </div>
 
@@ -13,14 +13,14 @@
   <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
     <div>
       <label class="form-label">Search Query (Filename or Objective)</label>
-      <input type="text" id="liveSearchQuery" class="form-control" placeholder="Type keywords e.g. Audit, Architecture, Budget, Policies...">
+      <input type="text" id="liveSearchQuery" class="form-control" placeholder="Type keywords e.g. Audit, Architecture, Budget, Policies..." value="{{ search_query }}">
     </div>
     <div>
       <label class="form-label">Filter Department</label>
       <select id="advFilterDept" class="form-control">
         <option value="">All Departments</option>
         {% for dept in departments %}
-          <option value="{{ dept.name }}">{{ dept.name }}</option>
+          <option value="{{ dept.name }}" {% if search_dept == dept.name %}selected{% endif %}>{{ dept.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -28,10 +28,11 @@
       <label class="form-label">File Type</label>
       <select id="advFilterType" class="form-control">
         <option value="">All Types</option>
-        <option value="pdf">PDF Document (.pdf)</option>
-        <option value="docx">Word (.docx)</option>
-        <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
-        <option value="png">PNG / JPG Image</option>
+        <option value="pdf" {% if search_type == 'pdf' %}selected{% endif %}>PDF Document (.pdf)</option>
+        <option value="docx" {% if search_type == 'docx' %}selected{% endif %}>Word (.docx)</option>
+        <option value="xlsx" {% if search_type == 'xlsx' %}selected{% endif %}>Excel Spreadsheet (.xlsx)</option>
+        <option value="png" {% if search_type == 'png' %}selected{% endif %}>PNG Image (.png)</option>
+        <option value="jpg" {% if search_type == 'jpg' %}selected{% endif %}>JPG Image (.jpg)</option>
       </select>
     </div>
   </div>
@@ -39,15 +40,15 @@
   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
     <div>
       <label class="form-label">Owner / Responsibility</label>
-      <input type="text" id="advFilterOwner" class="form-control" placeholder="Search by author, team or owner...">
+      <input type="text" id="advFilterOwner" class="form-control" placeholder="Search by author, team or owner..." value="{{ search_owner }}">
     </div>
     <div>
       <label class="form-label">Document Date (From)</label>
-      <input type="date" class="form-control">
+      <input type="date" id="advFilterFrom" class="form-control" value="{{ search_from }}">
     </div>
     <div>
       <label class="form-label">Document Date (To)</label>
-      <input type="date" class="form-control">
+      <input type="date" id="advFilterTo" class="form-control" value="{{ search_to }}">
     </div>
   </div>
 </div>
@@ -75,10 +76,10 @@
       <tbody id="searchResultsTableBody">
         {% if documents %}
           {% for doc in documents %}
-          <tr data-search-row data-filename="{{ doc.title }}" data-objective="{{ doc.objective }}" data-dept="{{ doc.department.name }}" data-owner="{{ doc.owner }}">
+          <tr>
             <td>
               <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="file-badge">file</span>
+                <span class="file-badge">{{ doc.original_filename|slice:"-4:"|lower }}</span>
                 <div>
                   <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500;">{{ doc.title }}</a>
                   <div style="font-size: 11px; color: var(--text-secondary); max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -100,7 +101,9 @@
                 <span class="badge badge-rejected">{{ doc.status }}</span>
               {% endif %}
             </td>
-            <td style="text-align: right;">
+            <td style="text-align: right; white-space: nowrap;">
+              <a href="{% url 'view_document_file' doc.doc_id %}" target="_blank" class="btn btn-primary btn-sm" title="Open in browser">Open</a>
+              <a href="{% url 'download_document_file' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Download file">Download</a>
               <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm">Inspect</a>
             </td>
           </tr>
@@ -110,8 +113,8 @@
             <td colspan="7" class="empty-table-cell">
               <div class="empty-state">
                 <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-title">No documents have been uploaded yet.</div>
-                <div class="empty-state-text">Once documents are added to the repository, you can perform instant live searches across titles, objectives, and metadata.</div>
+                <div class="empty-state-title">No documents found.</div>
+                <div class="empty-state-text">Once documents are uploaded, you can search and open or download them here.</div>
               </div>
             </td>
           </tr>
@@ -124,46 +127,99 @@
 
 {% block extra_js %}
 <script>
-  // Live Search filter logic
   const queryInput = document.getElementById('liveSearchQuery');
   const deptFilter = document.getElementById('advFilterDept');
   const typeFilter = document.getElementById('advFilterType');
   const ownerFilter = document.getElementById('advFilterOwner');
-  const rows = document.querySelectorAll('[data-search-row]');
+  const fromFilter = document.getElementById('advFilterFrom');
+  const toFilter = document.getElementById('advFilterTo');
+  const tableBody = document.getElementById('searchResultsTableBody');
   const countBadge = document.getElementById('searchResultsCount');
 
-  function filterSearch() {
-    const q = queryInput ? queryInput.value.toLowerCase().trim() : '';
-    const d = deptFilter ? deptFilter.value.toLowerCase().trim() : '';
-    const o = ownerFilter ? ownerFilter.value.toLowerCase().trim() : '';
-    let matchCount = 0;
+  let debounceTimer = null;
 
-    rows.forEach(r => {
-      const filename = (r.getAttribute('data-filename') || '').toLowerCase();
-      const obj = (r.getAttribute('data-objective') || '').toLowerCase();
-      const dept = (r.getAttribute('data-dept') || '').toLowerCase();
-      const owner = (r.getAttribute('data-owner') || '').toLowerCase();
+  function performLiveDbSearch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const params = new URLSearchParams({
+        format: 'json',
+        q: queryInput ? queryInput.value.trim() : '',
+        dept: deptFilter ? deptFilter.value.trim() : '',
+        type: typeFilter ? typeFilter.value.trim() : '',
+        owner: ownerFilter ? ownerFilter.value.trim() : '',
+        date_from: fromFilter ? fromFilter.value.trim() : '',
+        date_to: toFilter ? toFilter.value.trim() : '',
+      });
 
-      const matchesQ = !q || filename.includes(q) || obj.includes(q);
-      const matchesD = !d || dept === d;
-      const matchesO = !o || owner.includes(o);
+      fetch(`{% url 'search_page' %}?${params.toString()}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        countBadge.innerText = `Showing ${data.count} records`;
+        if (data.count === 0) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="7" class="empty-table-cell">
+                <div class="empty-state">
+                  <div class="empty-state-icon">🔍</div>
+                  <div class="empty-state-title">No matching documents found.</div>
+                  <div class="empty-state-text">Try adjusting your keywords, dates or department filters.</div>
+                </div>
+              </td>
+            </tr>`;
+          return;
+        }
 
-      if (matchesQ && matchesD && matchesO) {
-        r.style.display = '';
-        matchCount++;
-      } else {
-        r.style.display = 'none';
-      }
-    });
+        let html = '';
+        data.documents.forEach(doc => {
+          let statusBadge = '';
+          if (doc.status === 'PUBLISHED') {
+            statusBadge = '<span class="badge badge-published">Published</span>';
+          } else if (doc.status === 'PENDING') {
+            statusBadge = '<span class="badge badge-pending">Pending</span>';
+          } else {
+            statusBadge = `<span class="badge badge-rejected">${doc.status}</span>`;
+          }
 
-    if (countBadge) {
-      countBadge.innerText = `Showing ${matchCount} records`;
-    }
+          html += `
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="file-badge">${doc.ext}</span>
+                  <div>
+                    <a href="/documents/${doc.doc_id}/" style="font-weight: 500;">${doc.title}</a>
+                    <div style="font-size: 11px; color: var(--text-secondary); max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      ${doc.objective}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>${doc.department_name}</td>
+              <td style="font-size: 13px;">${doc.owner}</td>
+              <td style="color: var(--text-secondary); font-size: 12px;">${doc.document_date}</td>
+              <td><span class="badge badge-neutral">V1</span></td>
+              <td>${statusBadge}</td>
+              <td style="text-align: right; white-space: nowrap;">
+                <a href="/documents/${doc.doc_id}/view/" target="_blank" class="btn btn-primary btn-sm" title="Open in browser">Open</a>
+                <a href="/documents/${doc.doc_id}/download/" class="btn btn-secondary btn-sm" title="Download file">Download</a>
+                <a href="/documents/${doc.doc_id}/" class="btn btn-secondary btn-sm">Inspect</a>
+              </td>
+            </tr>`;
+        });
+        tableBody.innerHTML = html;
+      })
+      .catch(err => {
+        console.error('Live search error:', err);
+      });
+    }, 200); // 200ms debounce
   }
 
-  if (queryInput) queryInput.addEventListener('input', filterSearch);
-  if (deptFilter) deptFilter.addEventListener('change', filterSearch);
-  if (typeFilter) typeFilter.addEventListener('change', filterSearch);
-  if (ownerFilter) ownerFilter.addEventListener('input', filterSearch);
+  if (queryInput) queryInput.addEventListener('input', performLiveDbSearch);
+  if (deptFilter) deptFilter.addEventListener('change', performLiveDbSearch);
+  if (typeFilter) typeFilter.addEventListener('change', performLiveDbSearch);
+  if (ownerFilter) ownerFilter.addEventListener('input', performLiveDbSearch);
+  if (fromFilter) fromFilter.addEventListener('change', performLiveDbSearch);
+  if (toFilter) toFilter.addEventListener('change', performLiveDbSearch);
 </script>
 {% endblock %}

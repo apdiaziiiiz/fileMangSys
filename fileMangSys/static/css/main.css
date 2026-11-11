@@ -551,7 +551,58 @@ button, input, select, textarea {
 .file-badge.pdf { background-color: #FEE2E2; color: #DC2626; }
 .file-badge.docx { background-color: #DBEAFE; color: #2563EB; }
 .file-badge.xlsx { background-color: #DCFCE7; color: #16A34A; }
-.file-badge.png, .file-badge.jpg { background-color: #FEF3C7; color: #D97706; }
+/* Custom modern checkbox styling matching screenshot 4 */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 4px;
+  outline: none;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition: all 0.15s ease-in-out;
+  vertical-align: middle;
+  margin: 0;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: #0066FF;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #0066FF;
+  border-color: #0066FF;
+}
+
+input[type="checkbox"]:checked::before {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid #FFFFFF;
+  border-bottom: 2px solid #FFFFFF;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+input[type="checkbox"]:disabled {
+  background-color: #E2E8F0;
+  border-color: #CBD5E1;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+input[type="checkbox"]:disabled:checked {
+  background-color: #CBD5E1;
+  border-color: #94A3B8;
+}
+
+input[type="checkbox"]:disabled:checked::before {
+  border-left-color: #FFFFFF;
+  border-bottom-color: #FFFFFF;
+}
 
 /* Modal overlay & container */
 .modal-overlay {
@@ -578,12 +629,18 @@ button, input, select, textarea {
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 580px;
-  max-height: 90vh;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  animation: modalIn 0.15s ease-out;
+}
+
+.modal-card form {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border-color);
-  animation: modalIn 0.15s ease-out;
+  max-height: calc(92vh - 55px);
 }
 
 @keyframes modalIn {
@@ -681,7 +738,7 @@ button, input, select, textarea {
 .file-dropzone {
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 14px;
   text-align: center;
   background-color: var(--bg-subtle);
   cursor: pointer;
@@ -694,9 +751,9 @@ button, input, select, textarea {
 }
 
 .dropzone-icon {
-  font-size: 28px;
+  font-size: 22px;
   color: var(--primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 /* Progress bar */

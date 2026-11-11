@@ -5,63 +5,53 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">File Manager & Documents</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Central Document Repository &bull; Browse by department folders or inspect all organizational records.</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:2px;">Central Document Repository &bull; Browse by department and folder.</p>
   </div>
   <div class="page-actions">
-    <!-- Department Switcher Dropdown -->
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <label for="deptSelectDropdown" style="font-size: 12px; font-weight: 500; color: var(--text-secondary);">Department:</label>
-      <select id="deptSelectDropdown" class="form-control" style="width: 210px; padding: 6px 10px; font-weight: 500;" onchange="changeDepartment(this.value)">
+    <!-- Department filter -->
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label for="deptSelectDropdown" style="font-size:12px;font-weight:500;color:var(--text-secondary);">Dept:</label>
+      <select id="deptSelectDropdown" class="form-control" style="width:200px;padding:6px 10px;font-weight:500;" onchange="changeDepartment(this.value)">
         <option value="all" {% if active_dept == 'all' %}selected{% endif %}>All Departments</option>
         {% for dept in departments %}
-          <option value="{{ dept.name }}" {% if active_dept == dept.name %}selected{% endif %}>{{ dept.name }}</option>
+          <option value="{{ dept.id }}" {% if active_dept == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
         {% endfor %}
       </select>
     </div>
-
-    <button class="btn btn-secondary" onclick="alert('In Prototype: New Folder dialog.')">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      New Folder
-    </button>
   </div>
 </div>
 
-<!-- Department Folders Selector -->
+<!-- Folder cards -->
 <div class="folder-grid" id="folderCardsGrid">
-  <div class="folder-card active" data-folder-name="all">
+  <div class="folder-card {% if not selected_folder %}active{% endif %}" onclick="changeFolder('')" style="cursor:pointer;">
     <span class="folder-icon">🗂️</span>
     <div>
-      <div style="font-weight: 500;">All Folders</div>
-      <div style="font-size: 11px; color: var(--text-secondary);">Showing all files</div>
+      <div style="font-weight:500;">All Folders</div>
+      <div style="font-size:11px;color:var(--text-secondary);">Show all files</div>
     </div>
   </div>
-
   {% for f in current_folders %}
-  <div class="folder-card" data-folder-name="{{ f }}">
+  <div class="folder-card {% if selected_folder == f.id|stringformat:"s" %}active{% endif %}"
+    onclick="changeFolder('{{ f.id }}')" style="cursor:pointer;">
     <span class="folder-icon">📁</span>
     <div>
-      <div style="font-weight: 500;">{{ f }}</div>
-      <div style="font-size: 11px; color: var(--text-secondary);">Department folder</div>
+      <div style="font-weight:500;">{{ f.name }}</div>
+      <div style="font-size:11px;color:var(--text-secondary);">{{ f.department.name }}</div>
     </div>
   </div>
   {% endfor %}
 </div>
 
-<!-- Document Explorer Table -->
+<!-- Document table -->
 <div class="card">
   <div class="card-header">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <h2 class="card-title">Files</h2>
-      <span style="font-size: 12px; color: var(--text-secondary);">Click any file to inspect details, versions or share</span>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <h2 class="card-title">Files ({{ documents|length }})</h2>
+      <span style="font-size:12px;color:var(--text-secondary);">Open in browser, download, or inspect details</span>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <select id="filterFileType" class="form-control" style="width: 140px; padding: 4px 8px; font-size: 12px;">
-        <option value="">All Formats</option>
-        <option value="pdf">PDF</option>
-        <option value="docx">Word (.docx)</option>
-        <option value="xlsx">Excel (.xlsx)</option>
-        <option value="png">Images</option>
-      </select>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="docSearch" class="form-control" placeholder="Filter files..."
+        style="width:180px;padding:4px 8px;font-size:12px;">
     </div>
   </div>
 
@@ -69,57 +59,57 @@
     <table class="table">
       <thead>
         <tr>
-          <th data-sort>Filename</th>
+          <th>Filename</th>
           <th>Folder</th>
           <th>Department</th>
-          <th data-sort>Owner</th>
-          <th>Version</th>
-          <th data-sort>Upload Date</th>
+          <th>Owner</th>
+          <th>Upload Date</th>
           <th>Status</th>
-          <th style="text-align: right;">Actions</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% if documents %}
           {% for doc in documents %}
-          <tr data-searchable-row data-folder="{{ doc.folder.name }}" data-department="{{ doc.department.name }}" data-status="{{ doc.status }}">
+          <tr data-searchable-row>
             <td>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="file-badge">file</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="file-badge">{{ doc.original_filename|slice:"-4:"|lower }}</span>
                 <div>
-                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight: 500; color: var(--text-primary);">{{ doc.title }}</a>
-                  <div style="font-size: 11px; color: var(--text-secondary);">Doc ID: {{ doc.doc_id }}</div>
+                  <a href="{% url 'document_detail' doc.doc_id %}" style="font-weight:500;color:var(--text-primary);">{{ doc.title }}</a>
+                  <div style="font-size:11px;color:var(--text-secondary);">{{ doc.doc_id }} &bull; {{ doc.original_filename }}</div>
                 </div>
               </div>
             </td>
             <td>📁 {{ doc.folder.name|default:'General' }}</td>
             <td>{{ doc.department.name }}</td>
             <td>{{ doc.owner }}</td>
-            <td><span class="badge badge-neutral">V1</span></td>
-            <td style="color: var(--text-secondary); font-size: 12px;">{{ doc.created_at|date:"Y-m-d H:i" }}</td>
+            <td style="color:var(--text-secondary);font-size:12px;">{{ doc.created_at|date:"Y-m-d H:i" }}</td>
             <td>
               {% if doc.status == 'PUBLISHED' %}
                 <span class="badge badge-published">Published</span>
               {% elif doc.status == 'PENDING' %}
                 <span class="badge badge-pending">Pending</span>
+              {% elif doc.status == 'APPROVED' %}
+                <span class="badge badge-published">Approved</span>
               {% else %}
                 <span class="badge badge-rejected">{{ doc.status }}</span>
               {% endif %}
             </td>
-            <td style="text-align: right; white-space: nowrap;">
-              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm" title="View details">Inspect</a>
-              <a href="{% url 'version_history' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Version History">Versions</a>
-              <a href="{% url 'share_interface' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Internal Sharing">Share</a>
+            <td style="text-align:right;white-space:nowrap;">
+              <a href="{% url 'view_document_file' doc.doc_id %}" target="_blank" class="btn btn-secondary btn-sm" title="Open in browser">Open</a>
+              <a href="{% url 'download_document_file' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Download">Download</a>
+              <a href="{% url 'document_detail' doc.doc_id %}" class="btn btn-secondary btn-sm" title="Inspect">Inspect</a>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="8" class="empty-table-cell">
+            <td colspan="7" class="empty-table-cell">
               <div class="empty-state">
                 <div class="empty-state-icon">📁</div>
-                <div class="empty-state-title">No documents have been uploaded yet.</div>
-                <div class="empty-state-text">Use the "Upload Document" button above to upload files into the central repository.</div>
+                <div class="empty-state-title">No documents uploaded yet.</div>
+                <div class="empty-state-text">Use the "Upload Document" button in the top right to add files.</div>
               </div>
             </td>
           </tr>
@@ -128,16 +118,30 @@
     </table>
   </div>
 </div>
+
+<!-- Hidden file delete form -->
+<form method="POST" action="" id="fileDeleteForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete">
+</form>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  function changeDepartment(deptName) {
-    if (deptName === 'all') {
-      window.location.href = "{% url 'file_manager' %}?dept=all";
-    } else {
-      window.location.href = "{% url 'file_manager' %}?dept=" + encodeURIComponent(deptName);
-    }
+  function changeDepartment(deptId) {
+    window.location.href = "{% url 'file_manager' %}?dept=" + encodeURIComponent(deptId);
   }
+  function changeFolder(folderId) {
+    const deptId = new URLSearchParams(window.location.search).get('dept') || 'all';
+    window.location.href = "{% url 'file_manager' %}?dept=" + encodeURIComponent(deptId) + "&folder=" + encodeURIComponent(folderId);
+  }
+
+  document.getElementById('docSearch').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('[data-searchable-row]').forEach(row => {
+      row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
 </script>
 {% endblock %}

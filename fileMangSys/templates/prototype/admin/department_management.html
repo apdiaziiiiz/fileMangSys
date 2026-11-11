@@ -5,20 +5,21 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Department Administration</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Configure organizational departments, designated managers, storage quotas, and folder structures.</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:2px;">Create, configure, and delete departments, assign managers, and manage folder structures.</p>
   </div>
   <div class="page-actions">
-    <button class="btn btn-primary" onclick="alert('In Prototype: Add new department dialog.');">
+    <button class="btn btn-primary" onclick="openModal('createDeptModal')">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Department
     </button>
   </div>
 </div>
 
+<!-- Departments table -->
 <div class="card">
   <div class="card-header">
-    <h2 class="card-title">Department Matrix ({{ departments|length }})</h2>
-    <span style="font-size: 12px; color: var(--text-secondary);">Deactivating a department never erases historical files</span>
+    <h2 class="card-title">Departments ({{ departments|length }})</h2>
+    <span style="font-size:12px;color:var(--text-secondary);">Deactivating a department never erases historical files</span>
   </div>
 
   <div class="table-responsive">
@@ -26,12 +27,12 @@
       <thead>
         <tr>
           <th>Code / Name</th>
-          <th>Designated Manager</th>
-          <th>Staff Count</th>
-          <th>Files Count</th>
-          <th>Storage Quota</th>
+          <th>Manager</th>
+          <th>Users</th>
+          <th>Files</th>
+          <th>Quota</th>
           <th>Status</th>
-          <th style="text-align: right;">Action</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -39,17 +40,18 @@
           {% for dept in departments %}
           <tr>
             <td>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px;">{{ dept.code }}</span>
-                <strong style="font-size: 13px;">{{ dept.name }}</strong>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;font-weight:700;background:var(--primary-light);color:var(--primary);padding:2px 6px;border-radius:4px;">{{ dept.code }}</span>
+                <div>
+                  <strong style="font-size:13px;">{{ dept.name }}</strong>
+                  {% if dept.description %}<div style="font-size:11px;color:var(--text-secondary);">{{ dept.description }}</div>{% endif %}
+                </div>
               </div>
             </td>
             <td>{{ dept.manager.full_name|default:'Unassigned' }}</td>
-            <td>{{ dept.primary_users.count|default:0 }} users</td>
-            <td>{{ dept.documents.count|default:0 }} files</td>
-            <td>
-              <div style="font-size: 12px;">{{ dept.max_quota_mb }} MB limit</div>
-            </td>
+            <td>{{ dept.primary_users.count }} users</td>
+            <td>{{ dept.documents.count }} files</td>
+            <td style="font-size:12px;">{{ dept.max_quota_mb }} MB</td>
             <td>
               {% if dept.is_active %}
                 <span class="badge badge-published">Active</span>
@@ -57,9 +59,32 @@
                 <span class="badge badge-rejected">Inactive</span>
               {% endif %}
             </td>
-            <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit quota & folders for {{ dept.name }}');">Configure</button>
-              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Manage staff assignments for {{ dept.name }}');">Assign Staff</button>
+            <td style="text-align:right;white-space:nowrap;">
+              <button class="btn btn-secondary btn-sm"
+                onclick="openEditDeptModal('{{ dept.id }}','{{ dept.name|escapejs }}','{{ dept.description|escapejs }}','{{ dept.max_quota_mb }}','{{ dept.manager.id|default:'' }}')">
+                Edit
+              </button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="openFolderModal('{{ dept.id }}','{{ dept.name|escapejs }}')">
+                Folders
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                style="{% if dept.is_active %}color:#D97706;{% else %}color:#059669;{% endif %}"
+                onclick="confirmDelete('{% if dept.is_active %}Deactivate{% else %}Activate{% endif %} department {{ dept.name|escapejs }}?', () => {
+                  const form = document.getElementById('toggleDeptForm');
+                  form.dept_id.value = '{{ dept.id }}';
+                  form.submit();
+                })">
+                {% if dept.is_active %}Deactivate{% else %}Activate{% endif %}
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" style="color:#DC2626;"
+                onclick="confirmDelete('Permanently delete department {{ dept.name|escapejs }} and its empty folders? This cannot be undone.', () => {
+                  const form = document.getElementById('deleteDeptForm');
+                  form.dept_id.value = '{{ dept.id }}';
+                  form.submit();
+                })">
+                Delete
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -68,8 +93,8 @@
             <td colspan="7" class="empty-table-cell">
               <div class="empty-state">
                 <div class="empty-state-icon">🏢</div>
-                <div class="empty-state-title">No departments have been created yet.</div>
-                <div class="empty-state-text">Click "Add Department" to register organizational divisions and allocate their storage quotas.</div>
+                <div class="empty-state-title">No departments created yet.</div>
+                <div class="empty-state-text">Click "Add Department" to create your first department.</div>
               </div>
             </td>
           </tr>
@@ -78,4 +103,189 @@
     </table>
   </div>
 </div>
+
+<!-- Hidden action forms -->
+<form method="POST" action="{% url 'department_management' %}" id="toggleDeptForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="toggle_department">
+  <input type="hidden" name="dept_id" value="">
+</form>
+
+<form method="POST" action="{% url 'department_management' %}" id="deleteDeptForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_department">
+  <input type="hidden" name="dept_id" value="">
+</form>
+
+<form method="POST" action="{% url 'department_management' %}" id="deleteFolderForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_folder">
+  <input type="hidden" name="folder_id" value="">
+</form>
+
+<!-- Folder listing per department -->
+{% for dept in departments %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-header">
+    <h2 class="card-title">📁 {{ dept.name }} &mdash; Folders</h2>
+    <form method="POST" action="{% url 'department_management' %}" style="display:flex;gap:6px;align-items:center;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_folder">
+      <input type="hidden" name="dept_id" value="{{ dept.id }}">
+      <input type="text" name="folder_name" class="form-control" placeholder="New folder name" style="width:170px;padding:4px 8px;font-size:12px;" required>
+      <button type="submit" class="btn btn-primary btn-sm">+ Add Folder</button>
+    </form>
+  </div>
+  {% if dept.folders.all %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Folder Name</th><th>Files</th><th style="text-align:right;">Action</th></tr></thead>
+      <tbody>
+        {% for f in dept.folders.all %}
+        {% if not f.is_archived %}
+        <tr>
+          <td>📁 {{ f.name }}</td>
+          <td>{{ f.documents.count }} files</td>
+          <td style="text-align:right;">
+            <button type="button" class="btn btn-secondary btn-sm" style="color:#DC2626;"
+              onclick="confirmDelete('Delete folder {{ f.name|escapejs }}? Only possible if it contains no files.', () => {
+                const form = document.getElementById('deleteFolderForm');
+                form.folder_id.value = '{{ f.id }}';
+                form.submit();
+              })">
+              Delete Folder
+            </button>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:24px;">
+    <div class="empty-state-icon">📂</div>
+    <div class="empty-state-title">No folders yet in {{ dept.name }}.</div>
+    <div class="empty-state-text">Add a folder above to organise documents.</div>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- Create Department Modal -->
+<div class="modal-overlay" id="createDeptModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Create New Department</h3>
+      <button class="modal-close-btn" onclick="closeModal('createDeptModal')">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'department_management' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_department">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label required">Department Name</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Finance" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Short Code</label>
+            <input type="text" name="code" class="form-control" placeholder="e.g. FIN" maxlength="20" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Optional description"></textarea>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Storage Quota (MB)</label>
+            <input type="number" name="quota_mb" class="form-control" value="10240" min="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assigned Manager</label>
+            <select name="manager_id" class="form-control">
+              <option value="">-- None --</option>
+              {% for m in managers %}
+                <option value="{{ m.id }}">{{ m.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Department</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal-overlay" id="editDeptModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Department</h3>
+      <button class="modal-close-btn" onclick="closeModal('editDeptModal')">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'department_management' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_department">
+      <input type="hidden" name="dept_id" id="editDeptId">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label required">Department Name</label>
+          <input type="text" name="name" id="editDeptName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" id="editDeptDesc" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Storage Quota (MB)</label>
+            <input type="number" name="quota_mb" id="editDeptQuota" class="form-control" min="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assigned Manager</label>
+            <select name="manager_id" id="editDeptManager" class="form-control">
+              <option value="">-- None --</option>
+              {% for m in managers %}
+                <option value="{{ m.id }}">{{ m.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function openEditDeptModal(deptId, name, desc, quota, managerId) {
+    document.getElementById('editDeptId').value = deptId;
+    document.getElementById('editDeptName').value = name;
+    document.getElementById('editDeptDesc').value = desc;
+    document.getElementById('editDeptQuota').value = quota;
+    const mgrSel = document.getElementById('editDeptManager');
+    for (let opt of mgrSel.options) { opt.selected = opt.value === managerId; }
+    openModal('editDeptModal');
+  }
+
+  function openFolderModal(deptId, deptName) {
+    const cards = document.querySelectorAll('.card h2.card-title');
+    for (let h of cards) {
+      if (h.textContent.includes(deptName)) {
+        h.closest('.card').scrollIntoView({behavior:'smooth', block:'start'});
+        break;
+      }
+    }
+  }
+</script>
 {% endblock %}

@@ -33,34 +33,6 @@
       gap: 12px;
       margin-bottom: 24px;
     }
-    .login-quick-roles {
-      margin-top: 24px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-color);
-    }
-    .role-pills {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .role-pill-btn {
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 500;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      background: var(--bg-subtle);
-      color: var(--text-primary);
-      text-align: center;
-      transition: all 0.15s ease;
-      cursor: pointer;
-    }
-    .role-pill-btn:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: var(--primary-light);
-    }
   </style>
 </head>
 <body>
@@ -74,32 +46,32 @@
         </div>
       </div>
 
-      <form action="{% url 'dashboard_super_admin' %}" method="get">
+      {% if messages %}
+        <div style="margin-bottom: 16px;">
+          {% for message in messages %}
+            <div style="padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 8px; {% if message.tags == 'error' %}background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5;{% else %}background: #DEF7EC; color: #03543F; border: 1px solid #BCF0DA;{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form action="{% url 'login_page' %}" method="post">
+        {% csrf_token %}
         <div class="form-group">
           <label class="form-label required">Corporate Email</label>
-          <input type="email" class="form-control" value="" required placeholder="name@enterprise.local">
+          <input type="email" name="email" class="form-control" value="{{ request.POST.email|default:'' }}" required placeholder="name@enterprise.local" autofocus>
         </div>
         <div class="form-group" style="margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <label class="form-label required" style="margin-bottom: 0;">Password</label>
-            <a href="#" style="font-size: 11px; color: var(--text-secondary);">Forgot?</a>
+            <span style="font-size: 11px; color: var(--text-secondary);">Enterprise DMS</span>
           </div>
-          <input type="password" class="form-control" value="" required placeholder="Enter account password">
+          <input type="password" name="password" class="form-control" value="" required placeholder="Enter account password">
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 14px;">Sign In to Workspace</button>
       </form>
-
-      <!-- Clean prototype role launcher without clutter -->
-      <div class="login-quick-roles">
-        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Preview As Role</div>
-        <div class="role-pills">
-          <a href="{% url 'dashboard_super_admin' %}" class="role-pill-btn">Super Admin</a>
-          <a href="{% url 'dashboard_admin' %}" class="role-pill-btn">Administrator</a>
-          <a href="{% url 'dashboard_manager' %}" class="role-pill-btn">Manager</a>
-          <a href="{% url 'dashboard_employee' %}" class="role-pill-btn">Employee</a>
-        </div>
-      </div>
     </div>
   </div>
 </body>

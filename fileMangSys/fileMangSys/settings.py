@@ -140,3 +140,8 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# Authentication URL redirects
+LOGIN_URL = 'login_page'
+LOGIN_REDIRECT_URL = 'dashboard_dispatcher'
+LOGOUT_REDIRECT_URL = 'login_page'

@@ -5,19 +5,14 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Recycle Bin & Recovery</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Deleted documents remain fully recoverable for 30 days before permanent automated cleanup.</p>
-  </div>
-  <div class="page-actions">
-    <button class="btn btn-outline-danger btn-sm" onclick="alert('In Prototype: Automated 30-day retention cleanup scheduled on server.');">
-      Retention Policy (30 Days)
-    </button>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:2px;">Deleted documents remain recoverable. Permanent deletion removes all stored files.</p>
   </div>
 </div>
 
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">Deleted Documents ({{ deleted_items|length }})</h2>
-    <span style="font-size: 12px; color: var(--text-secondary);">Restoring places the file back in its original department folder</span>
+    <span style="font-size:12px;color:var(--text-secondary);">Restoring places the file back in its original department folder</span>
   </div>
 
   <div class="table-responsive">
@@ -25,12 +20,11 @@
       <thead>
         <tr>
           <th>Document</th>
-          <th>Original Department</th>
-          <th>Original Folder</th>
+          <th>Department</th>
+          <th>Folder</th>
           <th>Deleted By</th>
           <th>Deleted Date</th>
-          <th>Status</th>
-          <th style="text-align: right;">Recovery</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -38,37 +32,49 @@
           {% for item in deleted_items %}
           <tr>
             <td>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="file-badge" style="background-color: #FEE2E2; color: #DC2626;">DEL</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="file-badge" style="background:#FEE2E2;color:#DC2626;">DEL</span>
                 <div>
-                  <span style="font-weight: 500;">{{ item.title }}</span>
-                  <div style="font-size: 11px; color: var(--text-secondary);">ID: {{ item.doc_id }}</div>
+                  <span style="font-weight:500;">{{ item.title }}</span>
+                  <div style="font-size:11px;color:var(--text-secondary);">{{ item.doc_id }}</div>
                 </div>
               </div>
             </td>
             <td>{{ item.department.name }}</td>
             <td>📁 {{ item.folder.name|default:'General' }}</td>
-            <td style="font-weight: 500;">{{ item.deleted_by.full_name|default:'User' }}</td>
-            <td style="color: var(--text-secondary); font-size: 12px;">{{ item.deleted_at|date:"Y-m-d H:i" }}</td>
-            <td>
-              <span class="badge" style="background-color: #FEF3C7; color: #D97706; font-weight: 600;">
-                Soft-Deleted
-              </span>
-            </td>
-            <td style="text-align: right;">
-              <button class="btn btn-sm btn-primary" onclick="this.closest('tr').remove(); showToast('Document successfully restored to original folder.');">
-                Restore Document
+            <td style="font-weight:500;">{{ item.deleted_by.full_name|default:'Unknown' }}</td>
+            <td style="color:var(--text-secondary);font-size:12px;">{{ item.deleted_at|date:"Y-m-d H:i" }}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              <!-- Restore -->
+              <button type="button" class="btn btn-sm btn-primary"
+                onclick="confirmDelete('Restore document {{ item.title|escapejs }} to its original folder?', () => {
+                  const form = document.getElementById('recycleBinForm');
+                  form.action.value = 'restore';
+                  form.doc_id.value = '{{ item.doc_id }}';
+                  form.submit();
+                })">
+                Restore
+              </button>
+              <!-- Permanent delete -->
+              <button type="button" class="btn btn-sm btn-secondary" style="color:#DC2626;"
+                onclick="confirmDelete('PERMANENTLY delete document {{ item.title|escapejs }}? This removes the physical files and CANNOT be undone!', () => {
+                  const form = document.getElementById('recycleBinForm');
+                  form.action.value = 'permanent_delete';
+                  form.doc_id.value = '{{ item.doc_id }}';
+                  form.submit();
+                })">
+                Delete Forever
               </button>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="7" class="empty-table-cell">
+            <td colspan="6" class="empty-table-cell">
               <div class="empty-state">
                 <div class="empty-state-icon">🗑️</div>
                 <div class="empty-state-title">Recycle bin is empty.</div>
-                <div class="empty-state-text">No documents have been soft-deleted. Deleted documents remain recoverable here for 30 days.</div>
+                <div class="empty-state-text">No documents have been deleted. Deleted documents remain recoverable here.</div>
               </div>
             </td>
           </tr>
@@ -77,4 +83,10 @@
     </table>
   </div>
 </div>
+
+<form method="POST" action="{% url 'recycle_bin' %}" id="recycleBinForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="">
+  <input type="hidden" name="doc_id" value="">
+</form>
 {% endblock %}

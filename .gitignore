@@ -141,3 +141,9 @@ GitHub.sublime-settings
 
 #mine
 department_document_management_system_specification.md
+fileMangSys/PROJECT_MAP.md
+./MD
+./ui_prototype
+# Python cache files
+__pycache__/
+*.py[cod]

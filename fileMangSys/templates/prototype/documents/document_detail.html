@@ -4,30 +4,42 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-      <a href="{% url 'document_list' %}" style="font-size: 12px; color: var(--text-secondary);">&larr; Back to documents</a>
-      <span style="color: var(--border-color);">/</span>
-      <span style="font-size: 12px; color: var(--text-secondary);">{{ doc.department.name }}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <a href="{% url 'file_manager' %}" style="font-size:12px;color:var(--text-secondary);">&larr; Back to documents</a>
+      <span style="color:var(--border-color);">/</span>
+      <span style="font-size:12px;color:var(--text-secondary);">{{ doc.department.name }}</span>
     </div>
     <h1 class="page-title">{{ doc.title }}</h1>
   </div>
-  <div class="page-actions">
+  <div class="page-actions" style="display:flex;gap:8px;align-items:center;">
+
     <a href="{% url 'version_history' doc.doc_id %}" class="btn btn-secondary">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Version History ({{ versions|length }})
+      Versions ({{ versions|length }})
     </a>
+
     <a href="{% url 'share_interface' doc.doc_id %}" class="btn btn-secondary">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      Manage Sharing
+      Share
     </a>
-    <button class="btn btn-primary" onclick="alert('File download simulated for: {{ doc.title }}');">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download File
+
+    {% if user_role_code in 'SUPER_ADMIN,ADMIN,MANAGER' or doc.created_by.id == request.user.id %}
+    <button type="button" class="btn btn-secondary" style="color:#DC2626;"
+      onclick="confirmDelete('Move document {{ doc.title|escapejs }} to recycle bin?', () => {
+        document.getElementById('deleteDocForm').submit();
+      })">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete
     </button>
+    <form method="POST" action="{% url 'document_detail' doc.doc_id %}" id="deleteDocForm" style="display:none;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+    </form>
+    {% endif %}
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
   <!-- Main Document Metadata Card -->
   <div class="card">
     <div class="card-header">
@@ -36,77 +48,94 @@
         <span class="badge badge-published">Published</span>
       {% elif doc.status == 'PENDING' %}
         <span class="badge badge-pending">Pending Approval</span>
+      {% elif doc.status == 'APPROVED' %}
+        <span class="badge badge-published">Approved</span>
       {% else %}
         <span class="badge badge-rejected">{{ doc.status }}</span>
       {% endif %}
     </div>
 
-    <!-- Objective block -->
-    <div style="background-color: var(--bg-subtle); padding: 14px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 20px;">
-      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px;">Objective & Purpose</div>
-      <p style="font-size: 13px; line-height: 1.6;">{{ doc.objective }}</p>
+    <div style="background:var(--bg-subtle);padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px;">Objective & Purpose</div>
+      <p style="font-size:13px;line-height:1.6;">{{ doc.objective }}</p>
     </div>
 
-    <!-- Metadata Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Permanent Document ID</span>
-        <div style="font-weight: 600; font-family: monospace; font-size: 13px;">{{ doc.doc_id }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Permanent Document ID</span>
+        <div style="font-weight:600;font-family:monospace;font-size:13px;">{{ doc.doc_id }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Original Filename</span>
-        <div style="font-weight: 500;">{{ doc.original_filename }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Original Filename</span>
+        <div style="font-weight:500;">{{ doc.original_filename }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Department</span>
-        <div style="font-weight: 500;">{{ doc.department.name }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Department</span>
+        <div style="font-weight:500;">{{ doc.department.name }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Target Folder</span>
-        <div style="font-weight: 500;">📁 {{ doc.folder.name|default:'General' }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Target Folder</span>
+        <div style="font-weight:500;">📁 {{ doc.folder.name|default:'General' }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Owner / Team</span>
-        <div style="font-weight: 500;">{{ doc.owner }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Owner / Team</span>
+        <div style="font-weight:500;">{{ doc.owner }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Associated Document Date</span>
-        <div style="font-weight: 500;">{{ doc.document_date }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Document Date</span>
+        <div style="font-weight:500;">{{ doc.document_date }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">Uploaded By</span>
-        <div style="font-weight: 500;">{{ doc.created_by.full_name|default:doc.created_by.email }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Uploaded By</span>
+        <div style="font-weight:500;">{{ doc.created_by.full_name|default:doc.created_by.email }}</div>
       </div>
       <div>
-        <span style="font-size: 11px; color: var(--text-secondary);">System Upload Timestamp</span>
-        <div style="font-weight: 500;">{{ doc.created_at|date:"Y-m-d H:i" }}</div>
+        <span style="font-size:11px;color:var(--text-secondary);">Upload Timestamp</span>
+        <div style="font-weight:500;">{{ doc.created_at|date:"Y-m-d H:i" }}</div>
       </div>
+    </div>
+
+    <!-- Quick action footer on metadata card -->
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-color);display:flex;gap:10px;">
+      <a href="{% url 'view_document_file' doc.doc_id %}" target="_blank" class="btn btn-primary btn-sm">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open Document in Browser
+      </a>
+      <a href="{% url 'download_document_file' doc.doc_id %}" class="btn btn-secondary btn-sm">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Document
+      </a>
     </div>
   </div>
 
   <!-- Revisions & Sharing Sidebar -->
-  <div style="display: flex; flex-direction: column; gap: 20px;">
-    <!-- Active Version -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- Versions -->
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">Stored Revisions</h2>
-        <a href="{% url 'version_history' doc.doc_id %}" style="font-size: 12px; color: var(--primary);">View all</a>
+        <a href="{% url 'version_history' doc.doc_id %}" style="font-size:12px;color:var(--primary);">View all</a>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
         {% if versions %}
           {% for ver in versions %}
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-subtle); border-radius: var(--radius-sm);">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg-subtle);border-radius:var(--radius-sm);">
             <div>
-              <span style="font-weight: 600; font-family: monospace; color: var(--primary);">V{{ ver.version_number }}</span>
-              <span style="font-size: 11px; color: var(--text-secondary); margin-left: 6px;">{{ ver.uploaded_at|date:"Y-m-d" }}</span>
+              <span style="font-weight:600;font-family:monospace;color:var(--primary);">V{{ ver.version_number }}</span>
+              <span style="font-size:11px;color:var(--text-secondary);margin-left:6px;">{{ ver.uploaded_at|date:"Y-m-d" }}</span>
             </div>
-            {% if ver.is_current %}
-              <span class="badge badge-published" style="font-size: 10px;">Current</span>
-            {% endif %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              {% if ver.is_current %}
+                <span class="badge badge-published" style="font-size:10px;">Current</span>
+              {% endif %}
+              <a href="{% url 'download_version_file' doc.doc_id ver.version_number %}" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;">
+                Download
+              </a>
+            </div>
           </div>
           {% endfor %}
         {% else %}
-          <div style="font-size: 12px; color: var(--text-secondary); padding: 8px;">No extra revision records.</div>
+          <div style="font-size:12px;color:var(--text-secondary);padding:8px;">No extra revisions.</div>
         {% endif %}
       </div>
     </div>
@@ -115,19 +144,19 @@
     <div class="card">
       <div class="card-header">
         <h2 class="card-title">Internal Shares</h2>
-        <a href="{% url 'share_interface' doc.doc_id %}" style="font-size: 12px; color: var(--primary);">Manage</a>
+        <a href="{% url 'share_interface' doc.doc_id %}" style="font-size:12px;color:var(--primary);">Manage</a>
       </div>
       {% if shares %}
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
           {% for share in shares %}
-          <div style="font-size: 12px; display: flex; justify-content: space-between;">
+          <div style="font-size:12px;display:flex;justify-content:space-between;">
             <span>{{ share.shared_with.full_name }}</span>
             <span class="badge badge-neutral">{{ share.permission_level }}</span>
           </div>
           {% endfor %}
         </div>
       {% else %}
-        <div style="font-size: 12px; color: var(--text-secondary);">Not shared with any specific users.</div>
+        <div style="font-size:12px;color:var(--text-secondary);">Not shared with any specific users.</div>
       {% endif %}
     </div>
   </div>

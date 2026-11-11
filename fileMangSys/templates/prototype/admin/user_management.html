@@ -5,10 +5,10 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">User Account Management</h1>
-    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Manage user accounts, department associations, and roles across authorized terminals.</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:2px;">Manage user accounts, department assignments, and roles across the organization.</p>
   </div>
   <div class="page-actions">
-    <button class="btn btn-primary" onclick="alert('In Prototype: New user account creation modal.');">
+    <button class="btn btn-primary" onclick="openModal('createUserModal')">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Create User Account
     </button>
@@ -18,7 +18,7 @@
 <div class="card">
   <div class="card-header">
     <h2 class="card-title">Authorized Users ({{ users|length }})</h2>
-    <input type="text" id="userFilterInput" class="form-control" placeholder="Search user name or email..." style="width: 250px; padding: 4px 10px; font-size: 12px;">
+    <input type="text" id="userFilterInput" class="form-control" placeholder="Search name or email..." style="width:250px;padding:4px 10px;font-size:12px;">
   </div>
 
   <div class="table-responsive">
@@ -28,10 +28,10 @@
           <th>Name / ID</th>
           <th>Email</th>
           <th>Role</th>
-          <th>Assigned Department</th>
+          <th>Department</th>
           <th>Status</th>
           <th>Registered</th>
-          <th style="text-align: right;">Action</th>
+          <th style="text-align:right;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -39,22 +39,22 @@
           {% for u in users %}
           <tr data-user-row>
             <td>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div class="avatar-initials" style="width: 28px; height: 28px; font-size: 11px;">{{ u.full_name|slice:":2"|upper }}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="avatar-initials" style="width:28px;height:28px;font-size:11px;">{{ u.full_name|slice:":2"|upper }}</div>
                 <div>
-                  <span style="font-weight: 500;">{{ u.full_name }}</span>
-                  <div style="font-size: 10px; color: var(--text-secondary);">{{ u.user_id_code }}</div>
+                  <span style="font-weight:500;">{{ u.full_name }}</span>
+                  <div style="font-size:10px;color:var(--text-secondary);">{{ u.user_id_code }}</div>
                 </div>
               </div>
             </td>
-            <td style="color: var(--text-secondary);">{{ u.email }}</td>
+            <td style="color:var(--text-secondary);">{{ u.email }}</td>
             <td>
-              {% if u.role.code == 'SUPER_ADMIN' %}
-                <span class="badge" style="background-color: #FEF3C7; color: #B45309; font-weight: 600;">Super Admin</span>
+              {% if u.role.code == 'SUPER_ADMIN' or u.is_superuser %}
+                <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:600;">Super Admin</span>
               {% elif u.role.code == 'ADMIN' %}
-                <span class="badge" style="background-color: #DBEAFE; color: #1D4ED8; font-weight: 600;">Admin</span>
+                <span class="badge" style="background:#DBEAFE;color:#1D4ED8;font-weight:600;">Admin</span>
               {% elif u.role.code == 'MANAGER' %}
-                <span class="badge" style="background-color: #E0E7FF; color: #4338CA; font-weight: 600;">Manager</span>
+                <span class="badge" style="background:#E0E7FF;color:#4338CA;font-weight:600;">Manager</span>
               {% else %}
                 <span class="badge badge-neutral">{{ u.role.name|default:'Employee' }}</span>
               {% endif %}
@@ -67,10 +67,35 @@
                 <span class="badge badge-rejected">Deactivated</span>
               {% endif %}
             </td>
-            <td style="color: var(--text-secondary); font-size: 12px;">{{ u.created_at|date:"Y-m-d" }}</td>
-            <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit user permissions for {{ u.full_name }}');">Permissions</button>
-              <button class="btn btn-secondary btn-sm" onclick="alert('In Prototype: Edit account profile for {{ u.full_name }}');">Edit</button>
+            <td style="color:var(--text-secondary);font-size:12px;">{{ u.created_at|date:"Y-m-d" }}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              <button class="btn btn-secondary btn-sm"
+                onclick="openEditModal('{{ u.id }}','{{ u.full_name|escapejs }}','{{ u.role.id|default:'' }}','{{ u.primary_department.id|default:'' }}')">
+                Edit
+              </button>
+
+              {% if u.id != request.user.id and not u.is_superuser and u.role.code != 'SUPER_ADMIN' %}
+              <!-- Toggle active status -->
+              <button type="button" class="btn btn-secondary btn-sm"
+                style="{% if not u.is_active %}color:#059669;{% else %}color:#D97706;{% endif %}"
+                onclick="confirmDelete('{% if u.is_active %}Deactivate{% else %}Activate{% endif %} user account for {{ u.full_name|escapejs }}?', () => {
+                  const form = document.getElementById('toggleUserForm');
+                  form.user_id.value = '{{ u.id }}';
+                  form.submit();
+                })">
+                {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
+              </button>
+
+              <!-- Delete user button -->
+              <button type="button" class="btn btn-secondary btn-sm" style="color:#DC2626;"
+                onclick="confirmDelete('Are you sure you want to PERMANENTLY delete user {{ u.full_name|escapejs }} ({{ u.email }})? This action cannot be undone.', () => {
+                  const form = document.getElementById('deleteUserForm');
+                  form.user_id.value = '{{ u.id }}';
+                  form.submit();
+                })">
+                Delete
+              </button>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -79,8 +104,8 @@
             <td colspan="7" class="empty-table-cell">
               <div class="empty-state">
                 <div class="empty-state-icon">👥</div>
-                <div class="empty-state-title">No users have been registered yet.</div>
-                <div class="empty-state-text">Use the "Create User Account" button to add Super Administrators, Administrators, Department Managers, or Employees.</div>
+                <div class="empty-state-title">No users registered yet.</div>
+                <div class="empty-state-text">Use "Create User Account" to add users.</div>
               </div>
             </td>
           </tr>
@@ -89,18 +114,139 @@
     </table>
   </div>
 </div>
+
+<!-- Hidden action forms -->
+<form method="POST" action="{% url 'user_management' %}" id="toggleUserForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="toggle_active">
+  <input type="hidden" name="user_id" value="">
+</form>
+
+<form method="POST" action="{% url 'user_management' %}" id="deleteUserForm" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_user">
+  <input type="hidden" name="user_id" value="">
+</form>
+
+<!-- Create User Modal -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Create New User Account</h3>
+      <button class="modal-close-btn" onclick="closeModal('createUserModal')">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'user_management' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_user">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label required">Full Name</label>
+          <input type="text" name="full_name" class="form-control" placeholder="e.g. John Smith" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Email Address</label>
+          <input type="email" name="email" class="form-control" placeholder="user@company.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Password</label>
+          <input type="password" name="password" class="form-control" placeholder="Minimum 8 characters" required>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label required">Role</label>
+            <select name="role_id" class="form-control" required>
+              <option value="">-- Select Role --</option>
+              {% for r in all_roles %}
+                <option value="{{ r.id }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Department</label>
+            <select name="department_id" class="form-control">
+              <option value="">None / System-Wide</option>
+              {% for d in all_departments %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit User Account</h3>
+      <button class="modal-close-btn" onclick="closeModal('editUserModal')">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'user_management' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit_user">
+      <input type="hidden" name="user_id" id="editUserId">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label required">Full Name</label>
+          <input type="text" name="full_name" id="editFullName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password <span style="color:var(--text-secondary);font-weight:400;">(leave blank to keep current)</span></label>
+          <input type="password" name="new_password" class="form-control" placeholder="Enter new password or leave blank">
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <select name="role_id" id="editRoleId" class="form-control">
+              <option value="">-- Keep Current --</option>
+              {% for r in all_roles %}
+                <option value="{{ r.id }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select name="department_id" id="editDeptId" class="form-control">
+              <option value="">None / System-Wide</option>
+              {% for d in all_departments %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  const userInput = document.getElementById('userFilterInput');
-  if (userInput) {
-    userInput.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase().trim();
-      document.querySelectorAll('[data-user-row]').forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
-      });
+  document.getElementById('userFilterInput').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    document.querySelectorAll('[data-user-row]').forEach(r => {
+      r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
     });
+  });
+
+  function openEditModal(userId, fullName, roleId, deptId) {
+    document.getElementById('editUserId').value = userId;
+    document.getElementById('editFullName').value = fullName;
+    const roleSelect = document.getElementById('editRoleId');
+    const deptSelect = document.getElementById('editDeptId');
+    for (let opt of roleSelect.options) { opt.selected = opt.value === roleId; }
+    for (let opt of deptSelect.options) { opt.selected = opt.value === deptId; }
+    openModal('editUserModal');
   }
 </script>
 {% endblock %}
